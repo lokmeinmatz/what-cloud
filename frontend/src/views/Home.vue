@@ -1,6 +1,6 @@
 <template>
   <main class="container-md">
-    <h1>Welcome, {{$store.state.auth.userName}}</h1>
+    <h1>Welcome, {{$store.state.auth.user.name}}</h1>
     <div class="card col-md-3">
       <div class="card-img-top">
         <div class="progress">

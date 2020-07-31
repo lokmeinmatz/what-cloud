@@ -1,0 +1,41 @@
+use std::sync::RwLock;
+use std::collections::HashMap;
+use std::time::SystemTime;
+use rand::Rng;
+use crate::auth::UserID;
+
+fn get_rand_token<const N: usize>() -> [u8; N] {
+    let mut res = [0; N];
+
+    let mut valid_chars = ('a'..='z').chain('A'..='Z').chain('0'..='9').cycle();
+    let mut rng = rand::thread_rng();
+    for i in 0..N {
+        res[i] = valid_chars.nth(rng.gen::<usize>() % 100).unwrap() as u8;
+    }
+    res
+}
+
+pub struct ActiveTokenStorage {
+    user_tokens: RwLock<HashMap<[u8; crate::auth::AUTH_TOKEN_LEN], (SystemTime, UserID)>>
+}
+
+
+impl ActiveTokenStorage {
+    pub fn empty() -> Self {
+        ActiveTokenStorage {
+            user_tokens: RwLock::new(HashMap::new())
+        }
+    }
+
+    pub fn get_user_data(&self, token: &[u8]) -> Option<
+    (SystemTime, UserID)> {
+        self.user_tokens.read().ok().map(|hm| hm.get(token).cloned()).flatten()
+    }
+
+    pub fn new_user_token(&self, user_id: UserID) -> [u8; crate::auth::AUTH_TOKEN_LEN] {
+
+        let token = get_rand_token();
+        self.user_tokens.write().unwrap().insert(token, (SystemTime::now(), user_id));
+        token
+    }
+}

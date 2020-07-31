@@ -1,0 +1,6 @@
+create table if not exists USERS (
+    ID INTEGER PRIMARY KEY UNIQUE,
+    NAME TEXT NOT NULL,
+    PASSWORD_HASH TEXT NOT NULL,
+    ROLL INTEGER
+)

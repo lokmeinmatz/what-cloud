@@ -19,8 +19,14 @@
 <script>
 
 export default {
-  mounted() {
-    console.log(this.$route.path.substr(6))
+  async mounted() {
+    try {
+      await this.$store.dispatch('storage/getFolder', this.subPath)
+    }
+    catch (e) {
+      this.$store.commit('auth/setUser', null)
+      this.$router.push('/login')
+    }
   },
   data() {
     return {
