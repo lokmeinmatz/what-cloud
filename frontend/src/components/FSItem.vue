@@ -1,6 +1,7 @@
 <template>
   <div class="fs-item">
-    <router-link to="">{{name}}</router-link>
+    <img :src="`/static/icons/${file.type == 'file' ? file.ext : 'folder'}`" width="24" height="24" style="margin-right: 0.5em;"/>
+    <router-link :to="`${basePath}/${file.name}`">{{file.name}}</router-link>
   </div>
 </template>
 
@@ -8,7 +9,8 @@
 export default {
   name: 'FSItem',
   props: {
-    name: String
+    basePath: String,
+    file: Object
   }
 }
 </script>

@@ -19,7 +19,7 @@ export default {
     },
     actions: {
         async login(context, {name, password}) {
-            const url = 'http://localhost:8000/api/user/login'
+            const url = '/api/user/login'
             console.log(url)
             const res = await fetch(url, {
                 method: 'POST',

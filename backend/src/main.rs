@@ -31,7 +31,7 @@ fn cors() -> Cors {
 
 fn main() {
 
-    simplelog::TermLogger::init(LevelFilter::Info, Config::default(), TerminalMode::Mixed).expect("simplelog failed");
+    simplelog::TermLogger::init(LevelFilter::Debug, Config::default(), TerminalMode::Mixed).expect("simplelog failed");
 
     info!("Loading dotenv vars...");
     if let Err(e) = dotenv::dotenv() {

@@ -88,7 +88,7 @@ pub fn login(mut login_data: Json<UserLogin>,
 
     info!("User login: {}", login_data.name);
     let hashed_pw = hash_pw(login_data.password_base64.as_str());
-    println!("{}", hashed_pw);
+    //println!("{}", hashed_pw);
     if let Some(user) = db.get_user(database::GetUserQuery::ByName(&login_data.name)) {
         if user.hashed_pw == hashed_pw {
             return Ok(Json(UserLoginResponse {
@@ -112,7 +112,6 @@ mod tests {
 
     #[test]
     fn test_to_hex() {
-        assert_eq!(add(1, 2), 3);
     }
 
 

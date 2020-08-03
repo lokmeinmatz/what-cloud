@@ -31,7 +31,7 @@ impl SharedDatabase {
                 let n = stmt.query_map(params![name], user_from_row).unwrap().next();
                 println!("{:?}", n);
                 return n.map(|e| {
-                    eprintln!("{:?}", e);
+                    //eprintln!("{:?}", e);
                     e.ok()
                 }).flatten();
             },

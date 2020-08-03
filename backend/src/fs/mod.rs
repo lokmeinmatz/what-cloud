@@ -4,7 +4,7 @@ use rocket::response::status::NotFound;
 use rocket::response::Responder;
 use std::path::{PathBuf, Path};
 use std::borrow::Borrow;
-use log::info;
+use log::{info, warn};
 use rocket_contrib::json::Json;
 use serde::Serialize;
 
@@ -29,6 +29,7 @@ pub enum FolderContentResponse {
     PathNotDir(String),
     #[response(status = 409)]
     DirError(String),
+    #[response(status = 200)]
     FolderData(Json<NetFolder>)
 
 }
@@ -42,11 +43,21 @@ pub fn get_folder_content(url_encoded_path: &RawStr, user_id: UserID) -> FolderC
     }
     let rpath = Path::new(p_borrow);
 
-    let mut combined: PathBuf = PathBuf::from(crate::config::data_path());
-    combined.push(user_id.0);
+    
+
+    let mut root: PathBuf = PathBuf::from(crate::config::data_path());
+    root.push(&user_id.0);
+    let mut combined = root.clone();
     combined.push(rpath.strip_prefix("/").unwrap());
+    if !root.exists() {
+        match std::fs::create_dir(&root) {
+            Ok(()) => { info!("Created base dir of user {}", user_id.0) },
+            Err(e) => { warn!("Failed to create base dir of user {}: {:?}", user_id.0, e) }
+        }
+    }
     
     if !combined.exists() {
+        // check if user has allready folder or needs to get created
         return FolderContentResponse::PathNotFound("Path doesn't exist".into())
     }
     if !combined.is_dir() {
