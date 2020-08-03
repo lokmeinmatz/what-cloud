@@ -33,11 +33,12 @@ impl<'a, 'r> FromRequest<'a, 'r> for UserID {
         let token_storage = request.guard::<State<ActiveTokenStorage>>().unwrap();
 
         if let Some(token) = request.headers().get("Authorization").next() {
-            if token.starts_with("Basic ") {
-                let auth_token = &token[6..];
+            if token.starts_with("Bearer ") {
+                let auth_token = &token[7..];
 
                 if auth_token.len() == crate::auth::AUTH_TOKEN_LEN {
-                    trace!("auth token req: {}", auth_token);
+                    //info!("auth token req: {}", auth_token);
+            
                     if let Some(ud) = token_storage.get_user_data(auth_token.as_bytes()) {
                         return Outcome::Success(ud.1.clone())
                     }
@@ -48,6 +49,12 @@ impl<'a, 'r> FromRequest<'a, 'r> for UserID {
     }
 }
 
+
+impl UserID {
+    pub fn debug_access() -> Self {
+        UserID("DEBUG_ID".into())
+    }
+}
 
 pub const AUTH_TOKEN_LEN : usize = 16;
 

@@ -17,7 +17,7 @@ simplelog = "0.8.0"
 rand = "0.7.3"
 sha3 = "0.9.1"
 rusqlite = {version = "0.23.1", features = ["bundled"]}
-structopt = "0.3.15"
+dotenv = "0.15.0"
 
 [dependencies.rocket_contrib]
 version = "0.4.5"

@@ -27,6 +27,19 @@ impl ActiveTokenStorage {
         }
     }
 
+    pub fn with_debug_access_token() -> Self {
+        let mut hm = HashMap::new();
+        let dat: Vec<u8> = "0123456789abcdef".chars().map(|c| c as u8).collect();
+        assert_eq!(dat.len(), 16);
+        unsafe {
+            hm.insert(std::mem::transmute_copy(&*dat.as_ptr()), (SystemTime::now(), UserID::debug_access()));
+        }
+
+        ActiveTokenStorage {
+            user_tokens: RwLock::new(hm)
+        }
+    }
+
     pub fn get_user_data(&self, token: &[u8]) -> Option<
     (SystemTime, UserID)> {
         self.user_tokens.read().ok().map(|hm| hm.get(token).cloned()).flatten()

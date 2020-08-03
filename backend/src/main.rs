@@ -5,9 +5,8 @@
 #[macro_use] extern crate rocket_contrib;
 #[macro_use] extern crate serde_derive;
 
-use log::{LevelFilter, info};
+use log::{LevelFilter, info, error};
 use simplelog::{Config, TerminalMode};
-use structopt::StructOpt;
 use std::path::PathBuf;
 use rocket_cors::{Cors, AllowedOrigins};
 
@@ -19,12 +18,6 @@ mod token_validizer;
 mod fs;
 mod config;
 
-#[derive(StructOpt)]
-#[structopt(name = "what-cloud")]
-struct CMDArgs {
-    #[structopt(short, long, parse(from_os_str))]
-    database_path: Option<PathBuf>
-}
 
 #[get("/")]
 fn index() -> &'static str {
@@ -37,18 +30,24 @@ fn cors() -> Cors {
 }
 
 fn main() {
-    let args: CMDArgs = CMDArgs::from_args();
-    simplelog::TermLogger::init(LevelFilter::Debug, Config::default(), TerminalMode::Mixed);
-    let db = database::SharedDatabase::new(args.database_path.unwrap_or_else(|| PathBuf::from
-        ("database.sqlite")).as_path());
+
+    simplelog::TermLogger::init(LevelFilter::Info, Config::default(), TerminalMode::Mixed).expect("simplelog failed");
+
+    info!("Loading dotenv vars...");
+    if let Err(e) = dotenv::dotenv() {
+        error!("Dotenv error: {}", e);
+    }
 
     config::init().expect("Failed to init config...");
-    info!("config initialized");
+    
+
+    let db = database::SharedDatabase::new(config::db_path());
+
 
 
     rocket::ignite()
         .manage(db)
-        .manage(token_validizer::ActiveTokenStorage::empty())
+        .manage(token_validizer::ActiveTokenStorage::with_debug_access_token())
         .mount("/", routes![index])
         .mount("/api/", api_mount::mount_api())
         .attach(cors())
