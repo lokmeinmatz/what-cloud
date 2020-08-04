@@ -7,11 +7,11 @@
         <h4 class="card-title">User-Login</h4>
         <div class="form-group">
           <label for="username">Username</label>
-          <input type="string" v-model="name" class="form-control" id="username" placeholder="Enter Username">
+          <input name="username" autocomplete="username" autofocus type="string" v-model="name" class="form-control" id="username" placeholder="Enter Username">
         </div>
         <div class="form-group">
           <label for="password">Password</label>
-          <input type="password" v-model="password_raw" class="form-control" id="password" placeholder="Password">
+          <input name="password" autocomplete="password" type="password" v-model="password_raw" class="form-control" id="password" placeholder="Password">
         </div>
         <button class="btn btn-success" type="submit">Login</button>
       </form>

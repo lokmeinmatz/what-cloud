@@ -4,6 +4,8 @@ import Home from '../views/Home.vue'
 import Files from '../views/Files.vue'
 import store from '../store'
 
+import * as Nprogress from 'nprogress'
+
 Vue.use(VueRouter)
 
   const routes = [
@@ -39,12 +41,17 @@ const router = new VueRouter({
 })
 
 router.beforeEach((to, from, next) => {
+  Nprogress.start()
   if(store.getters['auth/isLoggedIn'] || to.path == '/login') next()
   else {
     console.log('Not logged in, redirecting to login')
     setTimeout(() => next('/login'), 1500)
     
   }
+})
+
+router.afterEach(() => {
+  Nprogress.done()
 })
 
 export default router
