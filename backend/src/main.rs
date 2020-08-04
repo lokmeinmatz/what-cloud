@@ -26,7 +26,7 @@ fn index() -> &'static str {
 
 fn cors() -> Cors {
     rocket_cors::CorsOptions::default().allowed_origins(AllowedOrigins::some_exact
-        (&["http://localhost:8080", "http://localhost:8081"])).to_cors().unwrap()
+        (&["http://localhost:8080", "http://192.168.178.38:8080"])).to_cors().unwrap()
 }
 
 fn main() {

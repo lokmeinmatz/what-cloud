@@ -29,7 +29,7 @@ impl SharedDatabase {
                 let mut stmt = conn.prepare(
                     "SELECT ID, NAME, PASSWORD_HASH FROM USERS WHERE NAME = ?").unwrap();
                 let n = stmt.query_map(params![name], user_from_row).unwrap().next();
-                println!("{:?}", n);
+                println!("db user by name {} -> {:?}", name, n);
                 return n.map(|e| {
                     //eprintln!("{:?}", e);
                     e.ok()
