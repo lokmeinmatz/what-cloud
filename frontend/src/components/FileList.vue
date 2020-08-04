@@ -1,6 +1,6 @@
 <template>
-  <div class="file-list">
-    <FSItem v-for="file in content" :basePath="basePath" :key="file.name" :file="file"/>
+  <div class="list-group">
+    <FSItem v-for="file in content" class="list-group-item" :basePath="basePath" :key="file.name" :file="file"/>
   </div>
 </template>
 

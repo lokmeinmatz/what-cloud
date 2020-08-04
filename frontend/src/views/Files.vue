@@ -1,36 +1,29 @@
 <template>
-  <div class="content container-sm">
-    <main>
+  <div id="files">
+    <main class="container-sm">
       <div class="header">
-        <div class="btn-group" role="group" aria-label="File path">
-          <router-link class="btn" to="/files">
-            <svg fill="none" style="height: 1.5em;" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" stroke="currentColor"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-          </router-link>
-          <router-link 
-          class="btn"
-            v-for="elmt in subPath"
-            :key="elmt.filePath"
-            :to="`/files${elmt.filePath}`"
-            >
-          ▶ {{elmt.segment}}
-          </router-link> 
-        </div>
+        <PathDisplay :path="subPath"/>
       </div>
       <div v-if="folder != null">
         <FileList :folder="folder"/>
       </div>
       <h3 v-else>This folder doesn't exist 😥</h3>
     </main>
-    <aside></aside>
+    <aside :class="{display: infoFile != null}">
+      <FileInfo class="display" :file="infoFile" v-if="infoFile != null"/>
+    </aside>
   </div>
 </template>
 <script>
 import FileList from '../components/FileList'
+import PathDisplay from '../components/PathDisplay'
+import FileInfo from '../components/FileInfo'
 import { getFolder } from '../business/fs'
-
 export default {
   components: {
-    FileList
+    FileList,
+    PathDisplay,
+    FileInfo
   },
   async mounted() {
     this.updateFolder()
@@ -61,6 +54,9 @@ export default {
     }
   },
   computed: {
+    infoFile() {
+      return this.$store.state.currFileInfo
+    },
     pathElmts() {
       return this.$route.path.substr(7).split('/').filter(e => e.trim().length > 0)
     },
@@ -81,25 +77,54 @@ export default {
 }
 </script>
 <style scoped>
-.btn {
-  display: flex;
-  align-items: flex-end;
-  background-color: rgba(120, 120, 120, 0.1);
-}
 
-.btn:last-child {
-  background-color: rgba(120, 120, 120, 0.15);
-}
-
-.btn:hover {
-  background-color: rgba(120, 120, 150, 0.2);
+#files {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto min-content;
+  grid-template-rows: 100%;
+  min-height: 100%;
+  width: 100vw;
+  align-content: stretch;
+  overflow-x: hidden;
 }
 
 .header {
-  padding: 1em 0;
-  height: 4em;
+  margin: 1em 0;
+  height: 3em;
   display: grid;
   justify-items: start;
   align-items: center;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+aside {
+  display: flex;
+  transition: width ease-in-out 0.2s;
+  width: 0;
+}
+
+.display {
+  width: 20em;
+}
+
+@media only screen and (max-width: 768px) {
+  #files {
+    grid-template-columns: 1fr;
+  }
+
+  aside {
+    position: fixed;
+    overflow: hidden;
+    justify-content: center;
+    top: 0;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.1);
+  }
+
+  aside.display {
+    width: 100vw;
+  }
 }
 </style>

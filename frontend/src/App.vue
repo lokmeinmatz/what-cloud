@@ -2,7 +2,7 @@
   <div id="app">
     <nav class="navbar navbar-expand-md navbar-dark bg-dark">
       <router-link class="navbar-brand" to="/">
-        WHAT
+        <span>MAT</span>
         <span>CLOUD</span>
       </router-link>
       <button
@@ -55,9 +55,14 @@ export default {
   
 }
 </script>
-<style scoped>
-.navbar-brand > span {
+<style>
+.navbar-brand > span:last-child {
   font-weight: 100;
 }
 
+#app {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: min-content 1fr;
+}
 </style>
