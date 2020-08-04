@@ -1,4 +1,4 @@
-use std::sync::RwLock;
+use std::sync::{RwLock, RwLockReadGuard};
 use std::collections::HashMap;
 use std::time::SystemTime;
 use rand::Rng;
@@ -15,8 +15,10 @@ fn get_rand_token<const N: usize>() -> [u8; N] {
     res
 }
 
+type Token = [u8; crate::auth::AUTH_TOKEN_LEN];
+
 pub struct ActiveTokenStorage {
-    user_tokens: RwLock<HashMap<[u8; crate::auth::AUTH_TOKEN_LEN], (SystemTime, UserID)>>
+    user_tokens: RwLock<HashMap<Token, (SystemTime, UserID)>>
 }
 
 
@@ -25,6 +27,10 @@ impl ActiveTokenStorage {
         ActiveTokenStorage {
             user_tokens: RwLock::new(HashMap::new())
         }
+    }
+
+    pub fn inner(&self) -> RwLockReadGuard<HashMap<Token, (SystemTime, UserID)>> {
+        self.user_tokens.read().unwrap()
     }
 
     pub fn with_debug_access_token() -> Self {
@@ -45,7 +51,7 @@ impl ActiveTokenStorage {
         self.user_tokens.read().ok().map(|hm| hm.get(token).cloned()).flatten()
     }
 
-    pub fn new_user_token(&self, user_id: UserID) -> [u8; crate::auth::AUTH_TOKEN_LEN] {
+    pub fn new_user_token(&self, user_id: UserID) -> Token {
 
         let token = get_rand_token();
         self.user_tokens.write().unwrap().insert(token, (SystemTime::now(), user_id));

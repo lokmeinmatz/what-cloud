@@ -1,11 +1,9 @@
 use rocket_contrib::json::Json;
-use serde::{Deserialize, Serialize};
 use rocket::response::status;
 use crate::database;
-use rand::Rng;
 use sha3::Digest;
 use rocket::{State, Request};
-use log::{info, trace};
+use log::{info};
 use crate::database::SharedDatabase;
 use crate::token_validizer::ActiveTokenStorage;
 use rocket::request::{FromRequest, Outcome};

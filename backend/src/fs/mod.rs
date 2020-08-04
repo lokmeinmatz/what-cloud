@@ -1,12 +1,10 @@
 use crate::auth::UserID;
 use rocket::http::RawStr;
-use rocket::response::status::NotFound;
 use rocket::response::Responder;
 use std::path::{PathBuf, Path};
 use std::borrow::Borrow;
 use log::{info, warn};
 use rocket_contrib::json::Json;
-use serde::Serialize;
 
 #[derive(Serialize, Debug)]
 pub struct NetFolder {

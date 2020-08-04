@@ -1,13 +1,11 @@
-#![feature(proc_macro_hygiene, decl_macro)]
-#![feature(const_generics)]
+#![feature(proc_macro_hygiene, decl_macro, const_generics)]
 
 #[macro_use] extern crate rocket;
-#[macro_use] extern crate rocket_contrib;
+//#[macro_use] extern crate rocket_contrib;
 #[macro_use] extern crate serde_derive;
 
 use log::{LevelFilter, info, error};
 use simplelog::{Config, TerminalMode};
-use std::path::PathBuf;
 use rocket_cors::{Cors, AllowedOrigins};
 
 
@@ -17,6 +15,8 @@ mod database;
 mod token_validizer;
 mod fs;
 mod config;
+mod icons;
+mod admin;
 
 
 #[get("/")]
@@ -43,13 +43,15 @@ fn main() {
 
     let db = database::SharedDatabase::new(config::db_path());
 
-
+    let mut api_routes = api_mount::mount_api();
+    api_routes.extend_from_slice(&admin::mount_admin());
 
     rocket::ignite()
         .manage(db)
+        .manage(icons::IconsCache::empty())
         .manage(token_validizer::ActiveTokenStorage::with_debug_access_token())
         .mount("/", routes![index])
-        .mount("/api/", api_mount::mount_api())
+        .mount("/api/", api_routes)
         .attach(cors())
         .launch();
 }

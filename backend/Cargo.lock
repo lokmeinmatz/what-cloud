@@ -97,6 +97,7 @@ dependencies = [
  "serde_json",
  "sha3",
  "simplelog",
+ "svg",
 ]
 
 [[package]]
@@ -1110,6 +1111,12 @@ name = "subtle"
 version = "2.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "502d53007c02d7605a05df1c1a73ee436952781653da5d0bf57ad608f66932c1"
+
+[[package]]
+name = "svg"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b65a64d32a41db2a8081aa03c1ccca26f246ff681add693f8b01307b137da79"
 
 [[package]]
 name = "syn"

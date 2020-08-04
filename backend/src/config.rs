@@ -1,10 +1,21 @@
 use std::path::{Path, PathBuf};
 use std::sync::Once;
 use log::{info, warn};
+use std::collections::HashMap;
+
+
+#[derive(Deserialize, Debug)]
+pub struct IconConf {
+    #[serde(rename = "displayText")]
+    display_text: String,
+    color: String
+}
+
 
 struct ConfigStore {
     data_path: PathBuf,
-    db_path: PathBuf
+    db_path: PathBuf,
+    icon_conf: HashMap<String, IconConf>
 }
 
 
@@ -20,6 +31,7 @@ pub fn debug_config_store() -> String {
     res.push_str(data_path().to_string_lossy().as_ref());
     res.push_str("\n\tdb_path: ");
     res.push_str(db_path().to_string_lossy().as_ref());
+    res.push_str(&format!("\n\tStored icon confs: {}", icon_confs().len()));
     res
 }
 
@@ -38,9 +50,26 @@ pub fn init() -> Result<(), &'static str> {
             warn!("DB_PATH not set, setting to default...");
         }
 
+        // load icon conf
+        let mut icon_conf = HashMap::new();
+
+        match std::fs::read_to_string("./icon-conf.json") {
+            Ok(json) => {
+                match serde_json::from_str(&json) {
+                    Ok(p) => icon_conf = p,
+                    Err(e) => warn!("Error while parsing icon-conf.json, ignoring file. {:?}", e)
+                }
+            },
+            Err(e) => {
+                warn!("Failed to load icon-conf.json, no settings loaded! {:?}", e);
+            }
+        }
+
+
         let conf = ConfigStore {
             data_path: PathBuf::from(m_data_path.unwrap_or("./test_data".into())),
-            db_path: PathBuf::from(m_db_path.unwrap_or("./database.sqlite".into()))
+            db_path: PathBuf::from(m_db_path.unwrap_or("./database.sqlite".into())),
+            icon_conf
         };
         unsafe {
             assert!(CONFIG_STORE.is_none());
@@ -57,6 +86,12 @@ pub fn init() -> Result<(), &'static str> {
 
 unsafe fn conf() -> &'static ConfigStore {
     CONFIG_STORE.as_ref().expect("Config not initialized")
+}
+
+pub fn icon_confs() -> &'static HashMap<String, IconConf> {
+    unsafe {
+        &conf().icon_conf
+    }
 }
 
 pub fn data_path() -> &'static Path {
