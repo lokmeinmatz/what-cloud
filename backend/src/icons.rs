@@ -45,6 +45,38 @@ pub fn icons_get(mut ext: String, cache: State<IconsCache>)
     use svg::node::element::path::Data;
     use svg::node::element::Path;
 
+    let conf = crate::config::icon_confs().get(&ext).map(|c| c.clone()).unwrap_or_else(|| {
+        let mut display_text = ext.clone();
+        display_text.truncate(3);
+
+        // generate color from sha
+        use sha3::Digest;
+        let mut hasher = sha3::Sha3_256::new();
+        hasher.update(display_text.as_bytes());
+        let mut res = String::with_capacity(7);
+        res.push('#');
+        for e in hasher.finalize().iter().take(6) {
+            res.push(std::char::from_digit((e % 16) as u32, 16).unwrap());
+        }
+
+
+        crate::config::IconConf {
+            display_text,
+            color: res
+        }
+    });
+
+    // calculate brightness of icon
+
+    let brightness: f32 = {
+        let mut total = 0;
+        let num = u32::from_str_radix(&conf.color[1..], 16).unwrap();
+        total += num & 0xff;
+        total += (num >> 8) & 0xff;
+        total += (num >> 16) & 0xff;
+        (total as f32) / (255.0 * 3.0)
+    };
+
     // draw basic rect 
     {
         let data = Data::new()
@@ -56,7 +88,7 @@ pub fn icons_get(mut ext: String, cache: State<IconsCache>)
             .close();
 
         let path = Path::new()
-            .set("fill", "gray")
+            .set("fill", conf.color)
             .set("stroke", "none")
             .set("d", data);
 
@@ -73,7 +105,7 @@ pub fn icons_get(mut ext: String, cache: State<IconsCache>)
             .close();
 
         let path = Path::new()
-            .set("fill", "#ccc")
+            .set("fill", if brightness < 0.5 {"rgba(255, 255, 255, 0.5)"} else {"rgba(0, 0, 0, 0.3)"})
             .set("stroke", "none")
             .set("d", data);
 

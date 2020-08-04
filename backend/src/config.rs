@@ -4,11 +4,11 @@ use log::{info, warn};
 use std::collections::HashMap;
 
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct IconConf {
     #[serde(rename = "displayText")]
-    display_text: String,
-    color: String
+    pub display_text: String,
+    pub color: String
 }
 
 
