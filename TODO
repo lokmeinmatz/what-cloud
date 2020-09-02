@@ -1,4 +1,8 @@
 
 Backend:
+  ☐ Folder download
   ☐ Cache data based on hash of file name and last modified date?
-  
+  ☐ MyShares: implement basic folder / file sharing (via link)
+Frontend:
+  ☐ add Share option
+  ☐ show used storage space if calculated

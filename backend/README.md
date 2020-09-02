@@ -31,6 +31,11 @@ get Folder or file Metadata
     lastModified: iso-time-string
 }
 
+For files, the size is in number of bytes. For folders,
+currently we sum up all file sizes directly inside the folder (direct children).
+
+In the future, it might be nice to cache the folder sizes so they get more accurate over time.
+The question is, if this is possible on the backend without too much overhead.
 
 ## GET /api/user
 
