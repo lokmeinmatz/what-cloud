@@ -19,6 +19,7 @@ sha3 = "0.9.1"
 rusqlite = {version = "0.23.1", features = ["bundled"]}
 dotenv = "0.15.0"
 svg = "0.8.0"
+chrono = {version = "0.4.15", features = ["serde"]}
 
 [dependencies.rocket_contrib]
 version = "0.4.5"

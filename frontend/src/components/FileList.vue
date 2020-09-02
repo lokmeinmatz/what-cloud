@@ -6,17 +6,17 @@
 
 <script>
 import FSItem from './FSItem'
-import { File } from '../business/fs'
+import { Folder } from '../business/fs'
 
 export default {
   name: 'FileList',
   components: {FSItem},
   props: {
-    folder: File
+    folder: Folder
   },
   computed: {
     content() {
-      return this.folder.allContents()
+      return this.folder.children
     },
     basePath() {
       return this.$route.path

@@ -1,6 +1,6 @@
 use rocket::Route;
 use rocket::State;
-use crate::token_validizer::ActiveTokenStorage;
+use crate::token_validizer::token_storage;
 use rocket_contrib::json::Json;
 
 pub fn mount_admin() -> Vec<Route> {
@@ -16,10 +16,10 @@ struct Session {
 }
 
 #[get("/admin/active_sessions")]
-fn get_active_sessions(tokens: State<ActiveTokenStorage>) -> Json<Vec<Session>> {
+fn get_active_sessions() -> Json<Vec<Session>> {
     let mut res = Vec::new();
 
-    for (token, data) in tokens.inner().inner().iter() {
+    for (token, data) in token_storage().inner().iter() {
         res.push(Session {
             token: String::from_utf8_lossy(token).to_string(),
             last_conn: data.0,

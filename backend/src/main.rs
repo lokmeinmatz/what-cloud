@@ -1,5 +1,4 @@
 #![feature(proc_macro_hygiene, decl_macro, const_generics)]
-
 #[macro_use] extern crate rocket;
 //#[macro_use] extern crate rocket_contrib;
 #[macro_use] extern crate serde_derive;
@@ -31,7 +30,7 @@ fn cors() -> Cors {
 
 fn main() {
 
-    simplelog::TermLogger::init(LevelFilter::Debug, Config::default(), TerminalMode::Mixed).expect("simplelog failed");
+    simplelog::TermLogger::init(LevelFilter::Info, Config::default(), TerminalMode::Mixed).expect("simplelog failed");
 
     info!("Loading dotenv vars...");
     if let Err(e) = dotenv::dotenv() {
@@ -39,7 +38,7 @@ fn main() {
     }
 
     config::init().expect("Failed to init config...");
-    
+    token_validizer::init(true);
 
     let db = database::SharedDatabase::new(config::db_path());
 

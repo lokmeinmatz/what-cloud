@@ -9,8 +9,8 @@
       </div>
       <h3 v-else>This folder doesn't exist 😥</h3>
     </main>
-    <aside :class="{display: infoFile != null}">
-      <FileInfo class="display" :file="infoFile" v-if="infoFile != null"/>
+    <aside :class="{display: nodeInfo != null}">
+      <FileInfo class="display" :file="nodeInfo" v-if="nodeInfo != null"/>
     </aside>
   </div>
 </template>
@@ -19,6 +19,8 @@ import FileList from '../components/FileList'
 import PathDisplay from '../components/PathDisplay'
 import FileInfo from '../components/FileInfo'
 import { getFolder } from '../business/fs'
+import { state } from '../business/globalState'
+
 export default {
   components: {
     FileList,
@@ -26,11 +28,15 @@ export default {
     FileInfo
   },
   async mounted() {
+    state.nodeInfoDisplay.subscribeWithId('files', f => {
+      this.nodeInfo = f
+    })
     this.updateFolder()
   },
   data() {
     return {
-      folder: null
+      folder: null,
+      nodeInfo: null
     }
   },
   methods: {
@@ -54,9 +60,6 @@ export default {
     }
   },
   computed: {
-    infoFile() {
-      return this.$store.state.currFileInfo
-    },
     pathElmts() {
       return this.$route.path.substr(7).split('/').filter(e => e.trim().length > 0)
     },

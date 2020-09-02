@@ -9,29 +9,73 @@
         </svg>
       </button>
     </div>
-    <div class="card-body">
+    <div class="card-body" style="postion:absolute;">
       <div class="card-title">
-        <img :src="`/api/static/icons/${file.type == 'folder' ? 'folder' : file.ext}.svg`" />
-        <h4>{{file.name}}</h4>
+        <img :src="`/api/static/icons/${file.type == 'folder' ? 'folder' : file.ext()}.svg`" />
+        <h4 style="text-wrap: break-word; width: 100%">{{file.name}}</h4>
       </div>
+      <table class="table" style="position: relative;">
+        <div id="meta-loader" v-if="fetchingMeta">
+        <div class="spinner-border" role="status">
+          <span class="sr-only">Loading...</span>
+        </div>
+        </div>
+        <tbody>
+          <tr>
+            <td>Size</td>
+            <td>{{ fileSize }}</td>
+          </tr>
+          <tr>
+            <td>Modified</td>
+            <td>{{ file.lastModified }}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </template>
 
 <script>
 import FSItem from "./FSItem";
-import { File } from "../business/fs";
+import { Node } from "../business/fs";
+import { ByteToFormattedString } from '../business/utils'
+import { state } from '../business/globalState'
 
 export default {
   name: "FileInfo",
+  data() {
+    return {
+      fetchingMeta: false
+    }
+  },
+  async mounted() {
+    await this.loadMeta()
+  },
+  watch: {
+    file: async function(newFile) {
+      await this.loadMeta()
+    } 
+  },
   props: {
     file: Object,
   },
   methods: {
+    async loadMeta() {
+      if (!this.file.fetched) {
+        this.fetchingMeta = true
+        await this.file.loadMetadata()
+        this.fetchingMeta = false
+      }
+    },
     close() {
-      this.$store.commit('displayFileInfo', null)
+      state.nodeInfoDisplay.emit(null)
     }
   },
+  computed: {
+    fileSize() {
+      return (this.file.type == 'folder' ? '≥' : '') + (this.file.fetched ? ByteToFormattedString(this.file.size) : 'unknown')
+    }
+  }
 };
 </script>
 
@@ -40,13 +84,10 @@ export default {
   align-self: center;
   width: 20em;
 }
-
-@media screen {
-}
-
 .card-title {
   display: grid;
-  grid-template-columns: 3em auto;
+  grid-template-columns: 3em minmax(0, 1fr);
+  width: 100%;
   align-items: center;
 }
 
@@ -56,5 +97,15 @@ export default {
 
 .card-title img {
   width: 2em;
+}
+
+#meta-loader {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: rgba(100, 100, 100, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>

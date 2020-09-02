@@ -42,7 +42,7 @@
           <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">
             <router-link class="nav-link dropdown-item" to="/settings">Settings</router-link>
             <div class="dropdown-divider"></div>
-            <a class="nav-link dropdown-item">Logout</a>
+            <router-link class="nav-link dropdown-item" to="/logout">Logout</router-link>
           </div>
         </div>
       </div>
@@ -51,8 +51,20 @@
   </div>
 </template>
 <script>
+import { state } from './business/globalState'
+
 export default {
-  
+  methods: {
+    logout() {
+      console.log('starting logout...')
+      window.rootNode = null
+      state.nodeInfoDisplay.emit(null)
+      this.$store.commit('auth/setUser', null)
+      // TODO send logout to server
+      console.log('logout completed')
+      window.location.href = '/'
+    }
+  }
 }
 </script>
 <style>

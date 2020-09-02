@@ -8,7 +8,7 @@ import * as Nprogress from 'nprogress'
 
 Vue.use(VueRouter)
 
-  const routes = [
+const routes = [
   {
     path: '/',
     name: 'Home',
@@ -31,6 +31,11 @@ Vue.use(VueRouter)
     // which is lazy-loaded when the route is visited.
     //component: () => import(/* webpackChunkName: "about" */ '../views/Files.vue')
     component: () => import(/* webpackChunkName: "login" */ '../views/Login.vue')
+  },
+  {
+    path: '/logout',
+    name: 'Logout',
+    component: () => import(/* webpackChunkName: "logout" */ '../views/Logout.vue')
   }
 ]
 
@@ -40,13 +45,22 @@ const router = new VueRouter({
   routes
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   Nprogress.start()
-  if(store.getters['auth/isLoggedIn'] || to.path == '/login') next()
+  //TODO check if logged in
+  if (to.path == '/login') return next()
+  if (store.state.auth.user == null) return next('/login')
+  const loginState = await fetch('/api/user', {
+    headers: {
+      'Authorization': `Bearer ${store.state.auth.user.auth_token}`
+    }
+  })
+
+  if (loginState.status == 200 && store.getters['auth/isLoggedIn']) next()
   else {
-    console.log('Not logged in, redirecting to login')
-    setTimeout(() => next('/login'), 1500)
-    
+    //console.log('Not logged in, redirecting to login')
+    next('/login')
+
   }
 })
 

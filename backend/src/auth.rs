@@ -5,8 +5,9 @@ use sha3::Digest;
 use rocket::{State, Request};
 use log::{info};
 use crate::database::SharedDatabase;
-use crate::token_validizer::ActiveTokenStorage;
+use crate::token_validizer::token_storage;
 use rocket::request::{FromRequest, Outcome};
+use serde_json::json;
 
 #[derive(Deserialize)]
 pub struct UserLogin {
@@ -28,7 +29,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for UserID {
     type Error = ();
     fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
         use rocket::http::Status;
-        let token_storage = request.guard::<State<ActiveTokenStorage>>().unwrap();
+        let token_storage = token_storage();
 
         if let Some(token) = request.headers().get("Authorization").next() {
             if token.starts_with("Bearer ") {
@@ -44,6 +45,27 @@ impl<'a, 'r> FromRequest<'a, 'r> for UserID {
             }
         }
         Outcome::Failure((Status::Unauthorized, ()))
+    }
+}
+
+use rocket::http::RawStr;
+use rocket::request::FromFormValue;
+
+impl<'v> FromFormValue<'v> for UserID {
+    type Error = ();
+
+    fn from_form_value(token: &'v RawStr) -> Result<UserID, ()> {
+        
+        if token.len() == crate::auth::AUTH_TOKEN_LEN {
+            //info!("auth token req: {}", auth_token);
+
+            let token_storage = token_storage();
+            if let Some(ud) = token_storage.get_user_data(token.as_bytes()) {
+                return Ok(ud.1.clone())
+            }
+        }
+        
+        Err(())
     }
 }
 
@@ -80,8 +102,7 @@ fn hash_pw(password: &str) -> String {
 /// Sends token on success, else error
 #[post("/user/login", data = "<login_data>")]
 pub fn login(mut login_data: Json<UserLogin>,
-             db: State<SharedDatabase>,
-             tokens: State<ActiveTokenStorage>)
+             db: State<SharedDatabase>)
     -> Result<Json<UserLoginResponse>, status::Unauthorized<&'static str>> {
 
     info!("User login: {}", login_data.name);
@@ -92,13 +113,29 @@ pub fn login(mut login_data: Json<UserLogin>,
             return Ok(Json(UserLoginResponse {
                 name: std::mem::replace(&mut login_data.name, String::new()),
                 profile_picture_url: None,
-                auth_token: tokens.new_user_token(user.id).iter().map(|e| *e as char).collect()
+                auth_token: token_storage().new_user_token(user.id).iter().map(|e| *e as char).collect()
             }))
         }
     }
 
         Err(status::Unauthorized(Some("Username or password unknown")))
 
+}
+
+/// Sends token on success, else error
+#[get("/user", rank = 1)]
+pub fn my_user(_user: UserID)
+    -> Result<Json<serde_json::Value>, status::BadRequest<&'static str>> {
+
+
+    Ok(Json(json!({"loggedIn": true})))
+}
+
+#[get("/user", rank = 2)]
+pub fn my_user_not_loggedin()
+    -> status::BadRequest<&'static str> {
+
+    status::BadRequest(None)
 }
 
 

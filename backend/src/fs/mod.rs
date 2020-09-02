@@ -1,10 +1,13 @@
 use crate::auth::UserID;
 use rocket::http::RawStr;
-use rocket::response::Responder;
+use rocket::response::{Responder, NamedFile};
 use std::path::{PathBuf, Path};
 use std::borrow::Borrow;
 use log::{info, warn};
 use rocket_contrib::json::Json;
+
+pub mod metadata;
+
 
 #[derive(Serialize, Debug)]
 pub struct NetFolder {
@@ -32,21 +35,33 @@ pub enum FolderContentResponse {
 
 }
 
-#[get("/folder?<url_encoded_path>")]
-pub fn get_folder_content(url_encoded_path: &RawStr, user_id: UserID) -> FolderContentResponse {
-    let raw_path = url_encoded_path.percent_decode().map_err(|e| FolderContentResponse::WrongDecoding(e.to_string())).unwrap();
+fn to_abs_data_path(user: &UserID, url_encoded_path: &RawStr) -> Result<PathBuf, ()> {
+    let raw_path = url_encoded_path.percent_decode().map_err(|_| ())?;
     let p_borrow: &str = raw_path.borrow();
+
     if p_borrow.borrow().contains("..") {
-        return FolderContentResponse::WrongDecoding("no uplink allowed".into());
+        return Err(());
     }
     let rpath = Path::new(p_borrow);
 
-    
+    let mut root: PathBuf = PathBuf::from(crate::config::data_path());
+    root.push(&user.0);
+    root.push(rpath.strip_prefix("/").map_err(|_| ())?);
+    Ok(root)
+}
 
+#[get("/folder?<url_encoded_path>")]
+pub fn get_folder_content(url_encoded_path: &RawStr, user_id: UserID) -> FolderContentResponse {
+ 
+
+
+
+    let combined = match to_abs_data_path(&user_id,url_encoded_path) {
+        Ok(c) => c,
+        Err(()) => return FolderContentResponse::WrongDecoding("Error in path".into())
+    };
     let mut root: PathBuf = PathBuf::from(crate::config::data_path());
     root.push(&user_id.0);
-    let mut combined = root.clone();
-    combined.push(rpath.strip_prefix("/").unwrap());
     if !root.exists() {
         match std::fs::create_dir(&root) {
             Ok(()) => { info!("Created base dir of user {}", user_id.0) },
@@ -92,16 +107,48 @@ pub fn get_folder_content(url_encoded_path: &RawStr, user_id: UserID) -> FolderC
     let name = combined.file_name().unwrap().to_string_lossy().into_owned();
     let mut path_from_root = Vec::new();
 
-    for seg in raw_path.split("/") {
+    for seg in url_encoded_path.split("%2F") {
         if !seg.is_empty() {
             path_from_root.push(seg.into());
         }
     }
 
     FolderContentResponse::FolderData(Json(NetFolder {
-        name,
+        name: if path_from_root.len() == 0 { "".into() } else { name },
         children_folder,
         files,
         path_from_root
     }))
+}
+
+#[derive(Responder, Debug)]
+pub enum FileDownloadResponse {
+    #[response(status = 200)]
+    File(NamedFile),
+    #[response(status = 401)]
+    Unauthorized(()),
+    #[response(status = 404)]
+    NotFound(())
+}
+
+
+#[get("/download/file?<path>&<token>")]
+pub fn download_file(path: &RawStr, token: UserID) -> FileDownloadResponse {
+    info!("User {:?} requested download of {}", token, path);
+
+    let abs_path = match to_abs_data_path(&token, path) {
+        Ok(p) => p,
+        Err(()) => {
+            println!("to_abs_data_path failed");
+            return FileDownloadResponse::NotFound(())}
+    };
+
+
+    match NamedFile::open(&abs_path) {
+        Ok(nf) => FileDownloadResponse::File(nf),
+        Err(e) => {
+            warn!("Error while reading file {:?} : {:?}", abs_path, e);
+            FileDownloadResponse::NotFound(())
+        }
+    }
 }

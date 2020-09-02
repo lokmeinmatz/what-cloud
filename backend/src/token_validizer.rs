@@ -2,6 +2,7 @@ use std::sync::{RwLock, RwLockReadGuard};
 use std::collections::HashMap;
 use std::time::SystemTime;
 use rand::Rng;
+use log::{warn, info};
 use crate::auth::UserID;
 
 fn get_rand_token<const N: usize>() -> [u8; N] {
@@ -21,6 +22,33 @@ pub struct ActiveTokenStorage {
     user_tokens: RwLock<HashMap<Token, (SystemTime, UserID)>>
 }
 
+pub static mut TOKEN_STORAGE: Option<ActiveTokenStorage> = None;
+static INIT_ONCE: std::sync::Once = std::sync::Once::new();
+
+pub fn init(debug_enabled: bool) {
+    if debug_enabled {
+        warn!("TokenStore debug enabled... DO NOT ENABLE IN PRODUCTION!!!");
+    }
+
+    if INIT_ONCE.is_completed() {
+        warn!("[init_tokenstore] was allready initialized...! This should not happen");
+    }
+
+    INIT_ONCE.call_once(|| {
+        let store = if debug_enabled { ActiveTokenStorage::with_debug_access_token() } else { ActiveTokenStorage::empty() };
+        unsafe {
+            TOKEN_STORAGE = Some(store);
+        }
+        info!("TOKEN_STORE initialized.")
+    })
+}
+
+/// get singleton ref of `ActiveTokenStorage`
+pub fn token_storage() -> &'static ActiveTokenStorage {
+    unsafe {
+        TOKEN_STORAGE.as_ref().expect("token_storage was not initialized. call ::init() to do so before starting server.")
+    }
+}
 
 impl ActiveTokenStorage {
     pub fn empty() -> Self {

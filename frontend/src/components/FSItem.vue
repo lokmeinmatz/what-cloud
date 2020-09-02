@@ -1,39 +1,51 @@
 <template>
-  <router-link :to="`${basePath}/${file.name}`" class="fs-item">
-    <img :src="`/api/static/icons/${file.type == 'file' ? file.ext : 'folder'}.svg`" width="24" height="24" style="margin-right: 0.5em;"/>
-    <p class="f-name">{{file.name}}</p>
+  <div class="fs-item">
+    <img
+      :src="`/api/static/icons/${file.type == 'file' ? file.ext() : 'folder'}.svg`"
+      width="24"
+      height="24"
+      style="margin-right: 0.5em;"
+    />
+    <router-link v-if="file.type == 'folder'" class="f-name" :to="`${basePath}/${file.name}`">{{file.name}}</router-link>
+    <a v-else class="f-name" :href="file.downloadLink()">{{file.name}}</a>
+    <DownloadButton :file="file" />
     <button class="btn btn-primary" @click.stop="showInfo($event, file)">Infos</button>
-  </router-link>
+  </div>
 </template>
 
 <script>
-import { File } from '../business/fs'
+import { Node } from "../business/fs";
+import { state } from "../business/globalState";
+import DownloadButton from "./DownloadButton.vue";
 
 export default {
-  name: 'FSItem',
+  name: "FSItem",
+  components: {
+    DownloadButton,
+  },
   props: {
     basePath: String,
-    file: Object
+    file: Node,
   },
   methods: {
     /**
      * @param {MouseEvent} event
-     * @param {File} file
+     * @param {Node} file
      */
     showInfo(event, file) {
-      event.stopPropagation()
-      event.preventDefault()
-
-      this.$store.commit('displayFileInfo', file)
-    }
-  }
-}
+      event.stopPropagation();
+      event.preventDefault();
+      state.nodeInfoDisplay.emit(file);
+    },
+  },
+};
 </script>
 
 <style scoped>
 .fs-item {
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr) 4em;
+  grid-template-columns: 24px minmax(0, 1fr) 3em 4em;
+  gap: 0.5em;
   align-items: center;
   min-height: 2em;
   padding: 0.5em;
@@ -44,7 +56,7 @@ export default {
 }
 
 .f-name {
-  margin: 0 0 0 1em;
+  margin: 0;
   word-wrap: break-word;
   word-wrap: break-all;
   max-width: 100%;

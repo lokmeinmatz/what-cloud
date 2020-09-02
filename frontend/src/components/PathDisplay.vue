@@ -28,7 +28,7 @@
 </template>
 
 <script>
-import { File } from "../business/fs";
+import { Node } from "../business/fs";
 
 export default {
   name: "PathDisplay",
