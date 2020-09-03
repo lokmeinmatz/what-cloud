@@ -22,8 +22,14 @@ pub struct UserLoginResponse {
     auth_token: String
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct UserID(pub String);
+
+impl std::fmt::Display for UserID {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> { 
+        write!(f, "UserId:{}", self.0)
+     }
+}
 
 impl<'a, 'r> FromRequest<'a, 'r> for UserID {
     type Error = ();
@@ -105,11 +111,11 @@ pub fn login(mut login_data: Json<UserLogin>,
              db: State<SharedDatabase>)
     -> Result<Json<UserLoginResponse>, status::Unauthorized<&'static str>> {
 
-    info!("User login: {}", login_data.name);
-    let hashed_pw = hash_pw(login_data.password_base64.as_str());
-    //println!("{}", hashed_pw);
-    if let Some(user) = db.get_user(database::GetUserQuery::ByName(&login_data.name)) {
-        if user.hashed_pw == hashed_pw {
+        let hashed_pw = hash_pw(login_data.password_base64.as_str());
+        //println!("{}", hashed_pw);
+        if let Some(user) = db.get_user(database::GetUserQuery::ByName(&login_data.name)) {
+            if user.hashed_pw == hashed_pw {
+            info!("User login: {}", user.id);
             return Ok(Json(UserLoginResponse {
                 name: std::mem::replace(&mut login_data.name, String::new()),
                 profile_picture_url: None,
@@ -119,6 +125,16 @@ pub fn login(mut login_data: Json<UserLogin>,
     }
 
         Err(status::Unauthorized(Some("Username or password unknown")))
+
+}
+
+/// Sends token on success, else error
+#[get("/user/logout")]
+pub fn logout(user: UserID) {
+
+    info!("User logout: {}", user);
+    //println!("{}", hashed_pw);
+    token_storage().remove_user(user);
 
 }
 

@@ -3,6 +3,7 @@ use rocket::Route;
 pub fn mount_api() -> Vec<Route> {
     routes![
         crate::auth::login, 
+        crate::auth::logout, 
         crate::fs::get_folder_content, 
         crate::fs::metadata::get_metadata,
         crate::fs::download_file,

@@ -30,6 +30,11 @@ export default {
       state.nodeInfoDisplay.emit(null)
       await timeout(100)
       this.progress = 50
+      await fetch('/api/user/logout', {
+                headers: {
+                    'Authorization': `Bearer ${this.$store.state.auth.user.auth_token}`
+                }
+            })
       this.$store.commit('auth/setUser', null)
       await timeout(100)
       this.progress = 75

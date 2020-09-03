@@ -7,6 +7,8 @@ use log::{info, warn};
 use rocket_contrib::json::Json;
 
 pub mod metadata;
+pub mod write_read_pipe;
+
 
 
 #[derive(Serialize, Debug)]
@@ -121,10 +123,12 @@ pub fn get_folder_content(url_encoded_path: &RawStr, user_id: UserID) -> FolderC
     }))
 }
 
-#[derive(Responder, Debug)]
+#[derive(Responder)]
 pub enum FileDownloadResponse {
     #[response(status = 200)]
     File(NamedFile),
+    #[response(status = 200)]
+    Zip(rocket::response::Stream<write_read_pipe::WRPipeReaderAdapter>),
     #[response(status = 401)]
     Unauthorized(()),
     #[response(status = 404)]

@@ -1,4 +1,4 @@
-use std::sync::{RwLock, RwLockReadGuard};
+use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::collections::HashMap;
 use std::time::SystemTime;
 use rand::Rng;
@@ -84,5 +84,14 @@ impl ActiveTokenStorage {
         let token = get_rand_token();
         self.user_tokens.write().unwrap().insert(token, (SystemTime::now(), user_id));
         token
+    }
+
+    /// Returns true if user token was removed, false otherwise
+    pub fn remove_user(&self, user_id: UserID) -> bool {
+        let mut t: RwLockWriteGuard<'_, _> = self.user_tokens.write().unwrap();
+        let prev_len = t.len();
+        t.retain(|_, v| v.1 != user_id);
+
+        t.len() == prev_len - 1
     }
 }
