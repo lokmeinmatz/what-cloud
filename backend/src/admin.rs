@@ -1,5 +1,4 @@
 use rocket::Route;
-use rocket::State;
 use crate::token_validizer::token_storage;
 use rocket_contrib::json::Json;
 

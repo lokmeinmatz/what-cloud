@@ -20,6 +20,9 @@ rusqlite = {version = "0.23.1", features = ["bundled"]}
 dotenv = "0.15.0"
 svg = "0.8.0"
 chrono = {version = "0.4.15", features = ["serde"]}
+streamed-zip-rs = { path = "../../streamed-zip-rs"}
+ringbuf = "0.2.2"
+lazy_static = "1.4.0"
 
 [dependencies.rocket_contrib]
 version = "0.4.5"

@@ -7,7 +7,7 @@ use log::{info, warn};
 use rocket_contrib::json::Json;
 
 pub mod metadata;
-pub mod write_read_pipe;
+pub mod zipwriter;
 
 
 
@@ -123,12 +123,14 @@ pub fn get_folder_content(url_encoded_path: &RawStr, user_id: UserID) -> FolderC
     }))
 }
 
+
+use rocket::response::Stream;
 #[derive(Responder)]
 pub enum FileDownloadResponse {
     #[response(status = 200)]
     File(NamedFile),
     #[response(status = 200)]
-    Zip(rocket::response::Stream<write_read_pipe::WRPipeReaderAdapter>),
+    Zip(Stream<zipwriter::BlockingConsumer>),
     #[response(status = 401)]
     Unauthorized(()),
     #[response(status = 404)]
@@ -147,12 +149,19 @@ pub fn download_file(path: &RawStr, token: UserID) -> FileDownloadResponse {
             return FileDownloadResponse::NotFound(())}
     };
 
-
-    match NamedFile::open(&abs_path) {
-        Ok(nf) => FileDownloadResponse::File(nf),
-        Err(e) => {
-            warn!("Error while reading file {:?} : {:?}", abs_path, e);
-            FileDownloadResponse::NotFound(())
+    if abs_path.is_dir() {
+        // handle zip file
+        let cons = zipwriter::new_zip_writer(abs_path).unwrap();
+        FileDownloadResponse::Zip(Stream::chunked(cons, 4096))
+    }
+    else {
+        match NamedFile::open(&abs_path) {
+            Ok(nf) => FileDownloadResponse::File(nf),
+            Err(e) => {
+                warn!("Error while reading file {:?} : {:?}", abs_path, e);
+                FileDownloadResponse::NotFound(())
+            }
         }
     }
+
 }
