@@ -6,6 +6,10 @@ export class Observable {
         this.subscribers = new Map
     }
 
+    currentValue() {
+        return this.value
+    }
+
     emit(val) {
         this.value = val
         this.subscribers.forEach((f) => {
@@ -46,7 +50,9 @@ export class Observable {
 
 
 export const state = {
-    nodeInfoDisplay: new Observable(null)
+    nodeInfoDisplay: new Observable(null),
+    // set to either {mode: 'files'} or {mode: 'shared', shareID: <id>}
+    fileDisplayState: new Observable({mode: 'files'})
 }
 
 window.globalState = state

@@ -2,6 +2,7 @@
   <div class="btn-group" role="group" aria-label="File path">
     <router-link class="btn" to="/files">
       <svg
+        v-if="mode.mode == 'files'"
         fill="none"
         style="height: 1.5em;"
         stroke-linecap="round"
@@ -12,6 +13,12 @@
       >
         <path
           d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+        />
+      </svg>
+      <svg v-else 
+        style="height: 1.5em;" viewBox="0 0 20 20" fill="currentColor" class="share w-6 h-6">
+        <path
+          d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z"
         />
       </svg>
     </router-link>
@@ -33,8 +40,9 @@ import { Node } from "../business/fs";
 export default {
   name: "PathDisplay",
   props: {
-    path: Array
-  }
+    path: Array,
+    mode: Object,
+  },
 };
 </script>
 

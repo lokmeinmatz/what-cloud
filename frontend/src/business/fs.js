@@ -25,6 +25,35 @@ export class Node {
         return `/api/download/file?path=${encodeURIComponent(this.path())}&token=${store.state.auth.user.auth_token}`
     }
 
+    /**
+     * 
+     * @param {boolean} shared 
+     */
+    async setShared(enabled) {
+        const url = `/api/folder/shared?url_encoded_path=${encodeURIComponent(pathArrayToString(this.pathFromRoot))}${enabled ? '&enabled' : ''}`
+        console.log(`Updating shared setting for node ${this.path()}`)
+
+        let res
+        try {
+            res = await fetch(url, {
+                method: 'patch',
+                headers: {
+                    'Authorization': `Bearer ${store.state.auth.user.auth_token}`
+                }
+            })
+            if (res.status != 200) {
+                return false
+            }
+            res = await res.json()
+        }
+        catch (e) {
+            console.error(e)
+            return false
+        }
+
+        console.log('shared update:', res)
+    }
+
     async loadMetadata() {
         const url = `/api/metadata?url_encoded_path=${encodeURIComponent(pathArrayToString(this.pathFromRoot))}`
         console.log(`Fetching metadata via ${url}`)
@@ -45,7 +74,7 @@ export class Node {
             return false
         }
 
-        console.log(res)
+        //console.log(res)
         this.size = res.size
         this.lastModified = res.lastModified
         this.fetched = true
@@ -146,7 +175,7 @@ async function getFolderCacheOrFetch({ currFolder, pathRemaining, pathFromRoot, 
         }
 
         if (res.ok) {
-            console.log('res ok')
+            //console.log('res ok')
             const folder = await res.json()
             console.log('fetched val:', folder)
             currFolder = new Folder({
@@ -187,7 +216,7 @@ async function getFolderCacheOrFetch({ currFolder, pathRemaining, pathFromRoot, 
     if (nchild == null) {
         return null
     }
-    console.log('next', next)
+    //console.log('next', next)
     pathFromRoot.push(next)
     return getFolderCacheOrFetch({ currFolder: nchild, pathRemaining, pathFromRoot, parentFolder: currFolder })
 }
@@ -199,7 +228,7 @@ async function getFolderCacheOrFetch({ currFolder, pathRemaining, pathFromRoot, 
  * @returns {string}
  */
 export function pathArrayToString(path) {
-    console.log(path)
+    //console.log(path)
     return '/' + path.join('/')
 }
 

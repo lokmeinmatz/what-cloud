@@ -5,7 +5,7 @@ use rand::Rng;
 use log::{warn, info};
 use crate::auth::UserID;
 
-fn get_rand_token<const N: usize>() -> [u8; N] {
+pub fn get_rand_token<const N: usize>() -> [u8; N] {
     let mut res = [0; N];
 
     let mut valid_chars = ('a'..='z').chain('A'..='Z').chain('0'..='9').cycle();

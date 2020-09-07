@@ -38,6 +38,47 @@ impl SharedDatabase {
             _ => None
         }
     }
+
+    pub fn get_share_id(&self, user_id: &UserID, path: &std::path::Path) -> Result<Option<String>, ()> {
+        let conn = self.conn();
+        let mut res: Result<String, _> = conn.query_row(
+            "SELECT ID FROM SHARED WHERE USER = ? AND BASE_PATH = ?",
+            params![&user_id.0, path.to_str().unwrap()],
+        |row| row.get(0));
+        dbg!(res);
+        unimplemented!()
+    }
+
+    /// if enabled, returns the share id
+    /// expects path to be valid 
+    pub fn update_share(&self, user_id: &UserID, path: &std::path::Path, enabled: bool) -> Option<String> {
+        let conn = self.conn();
+        let path_str = path.to_str().unwrap();
+        if enabled {
+
+            // first check if share allready exists
+            let mut res: Option<String> = conn.query_row(
+                "SELECT ID FROM SHARED WHERE USER = ? AND BASE_PATH = ?",
+                params![&user_id.0, path_str],
+            |row| row.get(0)).ok();
+
+            if res.is_some() { return res; }
+
+            // no share exists, create new
+            let share_id = unsafe { 
+                String::from_utf8_unchecked(
+                    crate::token_validizer::get_rand_token::<16>().into_iter().map(|e| *e).collect()) 
+            };
+            conn.execute(
+                "INSERT INTO SHARED (ID, USER, BASE_PATH, CREATED_AT) VALUES (?, ?, ?, datetime('now'))", 
+                params![&share_id, &user_id.0, path_str]).ok()?;
+            Some(share_id)
+        } else {
+
+            conn.execute("DELETE FROM SHARED WHERE BASE_PATH = ?", params![path_str]).ok();
+            None
+        }
+    }
 }
 
 
@@ -56,6 +97,7 @@ pub enum GetUserQuery<'a> {
     ByName(&'a str),
     ByID(&'a UserID)
 }
+
 
 #[derive(Debug)]
 pub enum UserRoll {

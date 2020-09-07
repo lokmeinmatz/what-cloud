@@ -1,8 +1,8 @@
 
 Backend:
-  ☐ Folder download
+  ✔ Folder download @done(20-09-07 17:13)
   ☐ Cache data based on hash of file name and last modified date?
-  ☐ MyShares: implement basic folder / file sharing (via link)
+  ☐ MyShares: implement basic folder / file sharing (via link) @started(20-09-07 17:15)
 Frontend:
   ☐ add Share option
   ☐ show used storage space if calculated

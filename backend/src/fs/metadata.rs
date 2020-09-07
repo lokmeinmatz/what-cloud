@@ -25,8 +25,11 @@ pub enum MetadataResponse {
 
 #[get("/metadata?<url_encoded_path>")]
 pub fn get_metadata(url_encoded_path: &RawStr, user_id: UserID) -> MetadataResponse {
- 
-    let combined = match super::to_abs_data_path(&user_id,url_encoded_path) {
+    let raw_path = match url_encoded_path.percent_decode() {
+        Ok(s) => s.into_owned(),
+        Err(e) => { return MetadataResponse::UnknownPath(e.to_string()); }
+    };
+    let combined = match super::to_abs_data_path(&user_id, &raw_path) {
         Ok(c) => c,
         Err(()) => return MetadataResponse::UnknownPath("error: to_abs_data_path failed".into())
     };

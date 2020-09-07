@@ -18,7 +18,8 @@ pub struct NetFolder {
     children_folder: Vec<String>,
     files: Vec<String>,
     #[serde(rename = "pathFromRoot")]
-    path_from_root: Vec<String>
+    path_from_root: Vec<String>,
+    shared: Option<String>
 }
 
 
@@ -37,14 +38,13 @@ pub enum FolderContentResponse {
 
 }
 
-fn to_abs_data_path(user: &UserID, url_encoded_path: &RawStr) -> Result<PathBuf, ()> {
-    let raw_path = url_encoded_path.percent_decode().map_err(|_| ())?;
-    let p_borrow: &str = raw_path.borrow();
 
-    if p_borrow.borrow().contains("..") {
+fn to_abs_data_path(user: &UserID, path: &str) -> Result<PathBuf, ()> {
+
+    if path.contains("..") {
         return Err(());
     }
-    let rpath = Path::new(p_borrow);
+    let rpath = Path::new(path);
 
     let mut root: PathBuf = PathBuf::from(crate::config::data_path());
     root.push(&user.0);
@@ -52,13 +52,35 @@ fn to_abs_data_path(user: &UserID, url_encoded_path: &RawStr) -> Result<PathBuf,
     Ok(root)
 }
 
+use rocket::State;
+use super::database::SharedDatabase;
+
+#[patch("/folder/shared?<url_encoded_path>&<enabled>")]
+pub fn update_folder_share(url_encoded_path: &RawStr, enabled: bool, user_id: UserID, db: State<SharedDatabase>)
+    -> Option<String> {
+    let raw_path: String = match url_encoded_path.percent_decode() {
+        Ok(s) => s.into_owned(),
+        Err(e) => { return None; }
+    };
+    let combined = to_abs_data_path(&user_id, &raw_path).ok()?;
+    if !combined.exists() { return None; }
+
+    // create new share
+    db.update_share(&user_id, &std::path::Path::new(&raw_path), enabled)
+}
+
 #[get("/folder?<url_encoded_path>")]
-pub fn get_folder_content(url_encoded_path: &RawStr, user_id: UserID) -> FolderContentResponse {
+pub fn get_folder_content(url_encoded_path: &RawStr, user_id: UserID, db: State<SharedDatabase>) -> FolderContentResponse {
  
-
-
-
-    let combined = match to_abs_data_path(&user_id,url_encoded_path) {
+    
+    let raw_path: String = match url_encoded_path.percent_decode() {
+        Ok(s) => s.into_owned(),
+        Err(e) => { return FolderContentResponse::WrongDecoding(e.to_string()); }
+    };
+    let shared: Option<String> = db.get_share_id(&user_id, &std::path::Path::new(&raw_path))
+        .ok().flatten();
+    
+    let combined = match to_abs_data_path(&user_id,&raw_path) {
         Ok(c) => c,
         Err(()) => return FolderContentResponse::WrongDecoding("Error in path".into())
     };
@@ -119,7 +141,8 @@ pub fn get_folder_content(url_encoded_path: &RawStr, user_id: UserID) -> FolderC
         name: if path_from_root.len() == 0 { "".into() } else { name },
         children_folder,
         files,
-        path_from_root
+        path_from_root,
+        shared
     }))
 }
 
@@ -142,7 +165,12 @@ pub enum FileDownloadResponse {
 pub fn download_file(path: &RawStr, token: UserID) -> FileDownloadResponse {
     info!("User {:?} requested download of {}", token, path);
 
-    let abs_path = match to_abs_data_path(&token, path) {
+    let path = match path.percent_decode() {
+        Ok(s) => s.into_owned(),
+        Err(e) => { return FileDownloadResponse::NotFound(()); }
+    };
+
+    let abs_path = match to_abs_data_path(&token, &path) {
         Ok(p) => p,
         Err(()) => {
             println!("to_abs_data_path failed");

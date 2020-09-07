@@ -4,8 +4,8 @@
       <p style="margin: 0; vertical-align: center;">File Info</p>
       <button class="btn btn-outline-danger" style="padding: 0.5em; display: grid;" @click="close">
         <svg width="10" height="10">
-          <line x1="0" y1="0" x2="10" y2="10" stroke="currentColor"/>
-          <line x1="0" y1="10" x2="10" y2="0" stroke="currentColor"/>
+          <line x1="0" y1="0" x2="10" y2="10" stroke="currentColor" />
+          <line x1="0" y1="10" x2="10" y2="0" stroke="currentColor" />
         </svg>
       </button>
     </div>
@@ -16,9 +16,9 @@
       </div>
       <table class="table" style="position: relative;">
         <div id="meta-loader" v-if="fetchingMeta">
-        <div class="spinner-border" role="status">
-          <span class="sr-only">Loading...</span>
-        </div>
+          <div class="spinner-border" role="status">
+            <span class="sr-only">Loading...</span>
+          </div>
         </div>
         <tbody>
           <tr>
@@ -29,6 +29,19 @@
             <td>Modified</td>
             <td>{{ file.lastModified }}</td>
           </tr>
+          <tr>
+            <td>Share</td>
+            <td>
+              <input class="form-check-input" type="checkbox" value id="share-this" />
+              <label class="form-check-label" for="share-this">Share this folder</label>
+            </td>
+          </tr>
+          <tr>
+            <td>Shared-URL<br/>Click to copy</td>
+            <td>
+              <a href="">shared-link</a>
+            </td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -38,23 +51,23 @@
 <script>
 import FSItem from "./FSItem";
 import { Node } from "../business/fs";
-import { ByteToFormattedString } from '../business/utils'
-import { state } from '../business/globalState'
+import { ByteToFormattedString } from "../business/utils";
+import { state } from "../business/globalState";
 
 export default {
   name: "FileInfo",
   data() {
     return {
-      fetchingMeta: false
-    }
+      fetchingMeta: false,
+    };
   },
   async mounted() {
-    await this.loadMeta()
+    await this.loadMeta();
   },
   watch: {
-    file: async function(newFile) {
-      await this.loadMeta()
-    } 
+    file: async function (newFile) {
+      await this.loadMeta();
+    },
   },
   props: {
     file: Object,
@@ -62,27 +75,31 @@ export default {
   methods: {
     async loadMeta() {
       if (!this.file.fetched) {
-        this.fetchingMeta = true
-        await this.file.loadMetadata()
-        this.fetchingMeta = false
+        this.fetchingMeta = true;
+        await this.file.loadMetadata();
+        this.fetchingMeta = false;
       }
     },
     close() {
-      state.nodeInfoDisplay.emit(null)
-    }
+      state.nodeInfoDisplay.emit(null);
+    },
   },
   computed: {
     fileSize() {
-      return (this.file.type == 'folder' ? '≥' : '') + (this.file.fetched ? ByteToFormattedString(this.file.size) : 'unknown')
-    }
-  }
+      return (
+        (this.file.type == "folder" ? "≥" : "") +
+        (this.file.fetched ? ByteToFormattedString(this.file.size) : "unknown")
+      );
+    },
+  },
 };
 </script>
 
 <style scoped>
 #file-info {
   align-self: center;
-  width: 20em;
+  /*width: 30em;*/
+  max-width: 90vw;
 }
 .card-title {
   display: grid;

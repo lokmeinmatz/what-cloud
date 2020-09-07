@@ -22,7 +22,7 @@
             <router-link class="nav-link" to="/files">Files</router-link>
           </li>
           <li class="nav-item">
-            <router-link class="nav-link" to="/shares">MyShares</router-link>
+            <router-link class="nav-link" to="/shared">MyShares</router-link>
           </li>
         </ul>
         <div class="nav-item dropdown">

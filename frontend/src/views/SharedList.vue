@@ -1,13 +1,7 @@
 <template>
-  <div id="files">
+  <div id="shared">
     <main class="container-sm">
-      <div class="header">
-        <PathDisplay :path="subPath" :mode="mode"/>
-      </div>
-      <div v-if="folder != null">
-        <FileList :folder="folder"/>
-      </div>
-      <h3 v-else>This folder doesn't exist 😥</h3>
+      <h2>Here you can see all your shares</h2>
     </main>
     <aside :class="{display: nodeInfo != null}">
       <FileInfo class="display" :file="nodeInfo" v-if="nodeInfo != null"/>
@@ -74,7 +68,6 @@ export default {
           break
         case 'shared':
           r = this.$route.path.split('/').filter(e => e.trim().length > 0)
-          r.shift()
           break
         default:
           return []
@@ -128,7 +121,7 @@ aside {
 }
 
 .display {
-  width: 25em;
+  width: 20em;
 }
 
 @media only screen and (max-width: 768px) {
