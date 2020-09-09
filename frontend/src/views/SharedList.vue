@@ -1,98 +1,60 @@
 <template>
   <div id="shared">
-    <main class="container-sm">
+    <main v-if="$store.getters['auth/isLoggedIn']" class="container-sm">
       <h2>Here you can see all your shares</h2>
+      <div class="list-group">
+        <FSItem v-for="entry in sharedEntries" class="list-group-item" :basePath="basePath" :key="entry.share_id" :file="file"/>
+      </div>
     </main>
-    <aside :class="{display: nodeInfo != null}">
-      <FileInfo class="display" :file="nodeInfo" v-if="nodeInfo != null"/>
-    </aside>
+    <main v-else class="container-sm">
+      <h2>You're not logged in!</h2>
+      <p>Did you want to see a shared folder? Make sure to copy the whole URL!</p>
+      <p>It should have some random characters after /shared/...</p>
+    </main>
   </div>
 </template>
 <script>
-import FileList from '../components/FileList'
-import PathDisplay from '../components/PathDisplay'
-import FileInfo from '../components/FileInfo'
-import { getFolder } from '../business/fs'
-import { state } from '../business/globalState'
+import FileList from "../components/FileList";
+import PathDisplay from "../components/PathDisplay";
+import FileInfo from "../components/FileInfo";
+import { getFolder } from "../business/fs";
+import { state } from "../business/globalState";
 
 export default {
   components: {
     FileList,
     PathDisplay,
-    FileInfo
+    FileInfo,
   },
   async mounted() {
-    state.nodeInfoDisplay.subscribeWithId('files', f => {
-      this.nodeInfo = f
-    })
+    const url = "/api/shared";
+    let res;
+    try {
+      res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${this.$store.state.auth.user.auth_token}`,
+        },
+      });
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
 
-    state.fileDisplayState.subscribeWithId('files', s => {
-      this.mode = s
-    })
+    if (res.ok) {
+      this.sharedEntries = await res.json()
+      
+    }
 
-    this.updateFolder()
   },
   data() {
     return {
-      folder: null,
-      nodeInfo: null,
-      mode: state.fileDisplayState.currentValue()
-    }
+      sharedEntries: [],
+    };
   },
-  methods: {
-    async updateFolder() {
-      console.log('route changed', this.$route.path)
-      console.log(this.subPath)
-      try {
-        this.folder = await getFolder(this.pathElmts)
-        //console.log('successfully got new folder', this.folder)
-        return
-      }
-      catch (e) {
-        console.error(e)
-        this.folder = null
-      }
-    }
-  },
-  watch: {
-    async $route() {
-      this.updateFolder()
-    }
-  },
-  computed: {
-    pathElmts() {
-      let r
-      switch (state.fileDisplayState.currentValue()) {
-        case 'files':
-          r = this.$route.path.split('/').filter(e => e.trim().length > 0)
-          break
-        case 'shared':
-          r = this.$route.path.split('/').filter(e => e.trim().length > 0)
-          break
-        default:
-          return []
-      }
-      r.shift()
-      return r
-    },
-    subPath() {
-  
-      return this.pathElmts.reduce(([collector, prevPath], curr) => {
-        const npath = `${prevPath}/${curr}`
-        collector.push({segment: curr, filePath: npath})
-        return [collector, npath]
-      }, [[], ''])[0]
-      
-    },
-
-    isRoot() {
-      return this.subPath.length == 0
-    }
-  }
-}
+  methods: {},
+};
 </script>
 <style scoped>
-
 #files {
   position: relative;
   display: grid;

@@ -72,7 +72,7 @@ router.beforeEach(async (to, from, next) => {
     state.fileDisplayState.emit({mode: 'files'})
   } else if (to.path.startsWith('/shared')) {
     let s = to.path.split('/').filter(s => s.length > 0)
-    console.log(s)
+    //console.log(s)
     if (s.length >= 2) 
     state.fileDisplayState.emit({mode: 'shared', shareID: s[1]})
   }

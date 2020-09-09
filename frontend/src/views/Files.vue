@@ -61,6 +61,7 @@ export default {
     }
   },
   watch: {
+    
     async $route() {
       this.updateFolder()
     }

@@ -6,7 +6,12 @@
         {
             "label": "terminal",
             "type": "shell",
-            "command": "./terminal.ps1"
+            "command": "./terminal.ps1",
+            "presentation": {
+                "reveal": "silent",
+                "focus": false,
+            },
+            "problemMatcher": []
         }
     ]
 }

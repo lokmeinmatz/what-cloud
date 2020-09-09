@@ -40,13 +40,33 @@ impl SharedDatabase {
     }
 
     pub fn get_share_id(&self, user_id: &UserID, path: &std::path::Path) -> Result<Option<String>, ()> {
+        use rusqlite::OptionalExtension;
+
         let conn = self.conn();
-        let mut res: Result<String, _> = conn.query_row(
+        conn.query_row(
             "SELECT ID FROM SHARED WHERE USER = ? AND BASE_PATH = ?",
             params![&user_id.0, path.to_str().unwrap()],
-        |row| row.get(0));
-        dbg!(res);
-        unimplemented!()
+        |row| row.get(0)).optional().map_err(|_| ())
+        
+    }
+
+    pub fn get_all_shared(&self, user_id: &UserID) -> Vec<crate::fs::shared::SharedEntry> {
+        let conn = self.conn();
+        let mut prep = conn.prepare("SELECT ID, BASE_PATH FROM SHARED WHERE USER = ?").unwrap();
+
+        prep.query_map(
+            params![&user_id.0], 
+            |r| {Ok((r.get(0), r.get(1)))}).unwrap()
+        .filter_map(|r| {
+            match r {
+                Ok((Ok(id), Ok(path))) => Some(crate::fs::shared::SharedEntry {
+                    path,
+                    share_id: id
+                }),
+                _ => None
+            }
+        }).collect()
+
     }
 
     /// if enabled, returns the share id
@@ -57,7 +77,7 @@ impl SharedDatabase {
         if enabled {
 
             // first check if share allready exists
-            let mut res: Option<String> = conn.query_row(
+            let res: Option<String> = conn.query_row(
                 "SELECT ID FROM SHARED WHERE USER = ? AND BASE_PATH = ?",
                 params![&user_id.0, path_str],
             |row| row.get(0)).ok();
@@ -65,10 +85,8 @@ impl SharedDatabase {
             if res.is_some() { return res; }
 
             // no share exists, create new
-            let share_id = unsafe { 
-                String::from_utf8_unchecked(
-                    crate::token_validizer::get_rand_token::<16>().into_iter().map(|e| *e).collect()) 
-            };
+            let share_id: String = crate::token_validizer::get_rand_token::<16>().iter().map(|e| *e as char).collect(); 
+
             conn.execute(
                 "INSERT INTO SHARED (ID, USER, BASE_PATH, CREATED_AT) VALUES (?, ?, ?, datetime('now'))", 
                 params![&share_id, &user_id.0, path_str]).ok()?;

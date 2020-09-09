@@ -2,12 +2,12 @@ use crate::auth::UserID;
 use rocket::http::RawStr;
 use rocket::response::{Responder, NamedFile};
 use std::path::{PathBuf, Path};
-use std::borrow::Borrow;
 use log::{info, warn};
 use rocket_contrib::json::Json;
 
 pub mod metadata;
 pub mod zipwriter;
+pub mod shared;
 
 
 
@@ -18,8 +18,7 @@ pub struct NetFolder {
     children_folder: Vec<String>,
     files: Vec<String>,
     #[serde(rename = "pathFromRoot")]
-    path_from_root: Vec<String>,
-    shared: Option<String>
+    path_from_root: Vec<String>
 }
 
 
@@ -55,19 +54,6 @@ fn to_abs_data_path(user: &UserID, path: &str) -> Result<PathBuf, ()> {
 use rocket::State;
 use super::database::SharedDatabase;
 
-#[patch("/folder/shared?<url_encoded_path>&<enabled>")]
-pub fn update_folder_share(url_encoded_path: &RawStr, enabled: bool, user_id: UserID, db: State<SharedDatabase>)
-    -> Option<String> {
-    let raw_path: String = match url_encoded_path.percent_decode() {
-        Ok(s) => s.into_owned(),
-        Err(e) => { return None; }
-    };
-    let combined = to_abs_data_path(&user_id, &raw_path).ok()?;
-    if !combined.exists() { return None; }
-
-    // create new share
-    db.update_share(&user_id, &std::path::Path::new(&raw_path), enabled)
-}
 
 #[get("/folder?<url_encoded_path>")]
 pub fn get_folder_content(url_encoded_path: &RawStr, user_id: UserID, db: State<SharedDatabase>) -> FolderContentResponse {
@@ -77,8 +63,7 @@ pub fn get_folder_content(url_encoded_path: &RawStr, user_id: UserID, db: State<
         Ok(s) => s.into_owned(),
         Err(e) => { return FolderContentResponse::WrongDecoding(e.to_string()); }
     };
-    let shared: Option<String> = db.get_share_id(&user_id, &std::path::Path::new(&raw_path))
-        .ok().flatten();
+    
     
     let combined = match to_abs_data_path(&user_id,&raw_path) {
         Ok(c) => c,
@@ -141,8 +126,7 @@ pub fn get_folder_content(url_encoded_path: &RawStr, user_id: UserID, db: State<
         name: if path_from_root.len() == 0 { "".into() } else { name },
         children_folder,
         files,
-        path_from_root,
-        shared
+        path_from_root
     }))
 }
 
@@ -167,7 +151,7 @@ pub fn download_file(path: &RawStr, token: UserID) -> FileDownloadResponse {
 
     let path = match path.percent_decode() {
         Ok(s) => s.into_owned(),
-        Err(e) => { return FileDownloadResponse::NotFound(()); }
+        Err(_) => { return FileDownloadResponse::NotFound(()); }
     };
 
     let abs_path = match to_abs_data_path(&token, &path) {

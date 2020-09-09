@@ -1,5 +1,6 @@
 import store from '../store'
 import router from '../router'
+import { state } from './globalState'
 
 export class Node {
     /**
@@ -7,18 +8,25 @@ export class Node {
      * @param {string} obj.name
      * @param {string[]} obj.pathFromRoot
      * @param {boolean} obj.fetched
+     * @param {string | null} obj.shared
      */
-    constructor({ name, pathFromRoot, fetched }) {
+    constructor({ name, pathFromRoot, fetched, shared }) {
         this.name = name
         this.pathFromRoot = pathFromRoot
         this.fetched = fetched != null ? fetched : false
         this.type = 'node'
         this.size = -1
-        this.lastModified = ''
+        this.lastModified = '',
+        this.shared = shared
     }
 
     path() {
         return '/' + this.pathFromRoot.join('/')
+    }
+
+    sharedLink() {
+        if (this.shared == null) return null
+        return `${state.baseUrl}/shared/${this.shared}/`
     }
 
     downloadLink() {
@@ -30,21 +38,22 @@ export class Node {
      * @param {boolean} shared 
      */
     async setShared(enabled) {
-        const url = `/api/folder/shared?url_encoded_path=${encodeURIComponent(pathArrayToString(this.pathFromRoot))}${enabled ? '&enabled' : ''}`
+        const url = `/api/folder/shared?url_encoded_path=${encodeURIComponent(pathArrayToString(this.pathFromRoot))}${enabled ? '&enabled=true' : ''}`
         console.log(`Updating shared setting for node ${this.path()}`)
 
         let res
         try {
             res = await fetch(url, {
-                method: 'patch',
+                method: 'PATCH',
                 headers: {
                     'Authorization': `Bearer ${store.state.auth.user.auth_token}`
                 }
             })
             if (res.status != 200) {
+                console.error(res)
                 return false
             }
-            res = await res.json()
+            res = await res.text()
         }
         catch (e) {
             console.error(e)
@@ -52,6 +61,8 @@ export class Node {
         }
 
         console.log('shared update:', res)
+        if (res.length == 0) this.shared = null
+        else this.shared = res 
     }
 
     async loadMetadata() {
@@ -78,6 +89,7 @@ export class Node {
         this.size = res.size
         this.lastModified = res.lastModified
         this.fetched = true
+        this.shared = res.shared
     }
 }
 
@@ -88,9 +100,10 @@ export class Folder extends Node {
      * @param {string} obj.name
      * @param {Node[]} obj.children
      * @param {string[]} obj.pathFromRoot
+     * @param {string | null} obj.shared
      */
-    constructor({ name, children, pathFromRoot }) {
-        super({ name, pathFromRoot, fetched: children != null })
+    constructor({ name, children, pathFromRoot, shared }) {
+        super({ name, pathFromRoot, fetched: children != null, shared })
 
         this.type = 'folder'
         /**
@@ -106,9 +119,10 @@ export class File extends Node {
      * @param {Object} obj
      * @param {string} obj.name
      * @param {string[]} obj.pathFromRoot
+     * @param {string | null} obj.shared
      */
-    constructor({ name, pathFromRoot }) {
-        super({ name, pathFromRoot })
+    constructor({ name, pathFromRoot, shared }) {
+        super({ name, pathFromRoot, shared })
 
         this.type = 'file'
 
@@ -180,8 +194,8 @@ async function getFolderCacheOrFetch({ currFolder, pathRemaining, pathFromRoot, 
             console.log('fetched val:', folder)
             currFolder = new Folder({
                 children: [
-                    ...folder.childrenFolder.map(f => new Folder({ name: f, pathFromRoot: folder.pathFromRoot.concat([f]) })),
-                    ...folder.files.map(f => new File({ name: f, pathFromRoot: folder.pathFromRoot.concat([f]).filter(e => e.length > 0) }))],
+                    ...folder.childrenFolder.map(f => new Folder({ name: f, pathFromRoot: folder.pathFromRoot.concat([f]), shared: null })),
+                    ...folder.files.map(f => new File({ name: f, pathFromRoot: folder.pathFromRoot.concat([f]).filter(e => e.length > 0), shared: null }))],
                 name: folder.name,
                 pathFromRoot: folder.pathFromRoot
             })

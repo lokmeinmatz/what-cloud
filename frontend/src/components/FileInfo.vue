@@ -32,14 +32,14 @@
           <tr>
             <td>Share</td>
             <td>
-              <input class="form-check-input" type="checkbox" value id="share-this" />
+              <input class="form-check-input" type="checkbox" value id="share-this" v-model="sharedToggle"/>
               <label class="form-check-label" for="share-this">Share this folder</label>
             </td>
           </tr>
-          <tr>
+          <tr v-if="file.shared">
             <td>Shared-URL<br/>Click to copy</td>
             <td>
-              <a href="">shared-link</a>
+              <input @click="copyShared" readonly type="text" ref="sharedLink" :value="sharedLink"/>
             </td>
           </tr>
         </tbody>
@@ -70,7 +70,7 @@ export default {
     },
   },
   props: {
-    file: Object,
+    file: Node,
   },
   methods: {
     async loadMeta() {
@@ -83,6 +83,12 @@ export default {
     close() {
       state.nodeInfoDisplay.emit(null);
     },
+    copyShared() {
+      console.log(this.$refs.sharedLink)
+      this.$refs.sharedLink.select()
+      document.execCommand('copy')
+      console.log('copied shared path')
+    }
   },
   computed: {
     fileSize() {
@@ -91,6 +97,18 @@ export default {
         (this.file.fetched ? ByteToFormattedString(this.file.size) : "unknown")
       );
     },
+
+    sharedLink() {
+      return this.file.sharedLink()
+    },
+
+    sharedToggle: {
+      get() { return this.file.shared },
+      set(v) {
+        console.log('Setting share of curr node:', v)
+        this.file.setShared(v)
+      }
+    }
   },
 };
 </script>

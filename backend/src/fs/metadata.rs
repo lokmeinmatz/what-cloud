@@ -3,6 +3,8 @@ use rocket::http::RawStr;
 use rocket_contrib::json::Json;
 use std::path::PathBuf;
 use log::{info, warn};
+use rocket::State;
+use crate::database::SharedDatabase;
 
 #[derive(Serialize, Debug)]
 pub struct NodeMetadata {
@@ -10,7 +12,8 @@ pub struct NodeMetadata {
     node_type: &'static str,
     size: f64,
     #[serde(rename = "lastModified")]
-    last_modified: chrono::DateTime<chrono::Utc>
+    last_modified: chrono::DateTime<chrono::Utc>,
+    shared: Option<String>
 }
 
 
@@ -24,11 +27,16 @@ pub enum MetadataResponse {
 }
 
 #[get("/metadata?<url_encoded_path>")]
-pub fn get_metadata(url_encoded_path: &RawStr, user_id: UserID) -> MetadataResponse {
+pub fn get_metadata(url_encoded_path: &RawStr, user_id: UserID, db: State<SharedDatabase>) -> MetadataResponse {
     let raw_path = match url_encoded_path.percent_decode() {
         Ok(s) => s.into_owned(),
         Err(e) => { return MetadataResponse::UnknownPath(e.to_string()); }
     };
+    let shared: Option<String> = db.get_share_id(&user_id, &std::path::Path::new(&raw_path))
+    .ok().flatten();
+
+    //dbg!(&shared);
+
     let combined = match super::to_abs_data_path(&user_id, &raw_path) {
         Ok(c) => c,
         Err(()) => return MetadataResponse::UnknownPath("error: to_abs_data_path failed".into())
@@ -79,13 +87,15 @@ pub fn get_metadata(url_encoded_path: &RawStr, user_id: UserID) -> MetadataRespo
                 MetadataResponse::Success(Json(NodeMetadata {
                     node_type: "folder",
                     size: size as f64,
-                    last_modified: last_mod
+                    last_modified: last_mod,
+                    shared
                 }))
             } else {
                 MetadataResponse::Success(Json(NodeMetadata {
                     node_type: "file",
                     size: meta.len() as f64,
-                    last_modified: last_mod
+                    last_modified: last_mod,
+                    shared
                 }))
             }
 

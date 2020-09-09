@@ -52,7 +52,8 @@ export class Observable {
 export const state = {
     nodeInfoDisplay: new Observable(null),
     // set to either {mode: 'files'} or {mode: 'shared', shareID: <id>}
-    fileDisplayState: new Observable({mode: 'files'})
+    fileDisplayState: new Observable({mode: 'files'}),
+    baseUrl: location.protocol + '//' +location.host
 }
 
 window.globalState = state

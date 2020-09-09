@@ -2,7 +2,13 @@
 Backend:
   ✔ Folder download @done(20-09-07 17:13)
   ☐ Cache data based on hash of file name and last modified date?
-  ☐ MyShares: implement basic folder / file sharing (via link) @started(20-09-07 17:15)
 Frontend:
-  ☐ add Share option
+  ✔ add Share option @done(20-09-09 17:53)
   ☐ show used storage space if calculated
+
+Features:
+  Shared:
+    ☐ MyShares: implement basic folder / file sharing (via link) @started(20-09-07 17:15)
+    ☐ Shared files don't get deleted immedialtely but flagged with disabled - date
+    ☐ Display users active shared nodes @started(20-09-09 17:56)
+    ☐ Check file access of shared if not logged in
