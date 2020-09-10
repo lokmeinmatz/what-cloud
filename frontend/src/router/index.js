@@ -90,6 +90,7 @@ router.beforeEach(async (to, from, next) => {
 
   if (loginState.status == 200 && store.getters['auth/isLoggedIn']) next()
   else {
+    store.commit('auth/setUser', null)
     //console.log('Not logged in, redirecting to login')
     next('/login')
 

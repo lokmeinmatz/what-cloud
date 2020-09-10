@@ -11,64 +11,80 @@ pub mod shared;
 
 
 
+
+/// 
 #[derive(Serialize, Debug)]
-pub struct NetFolder {
+pub struct NetNode {
     name: String,
+    #[serde(rename = "type")]
+    node_type: &'static str,
     #[serde(rename = "childrenFolder")]
-    children_folder: Vec<String>,
-    files: Vec<String>,
+    children_folder: Option<Vec<String>>,
+    files: Option<Vec<String>>,
     #[serde(rename = "pathFromRoot")]
-    path_from_root: Vec<String>
+    path_from_root: Vec<String>,
+    metadata: metadata::NodeMetadata
 }
 
 
+
+
+
 #[derive(Responder, Debug)]
-pub enum FolderContentResponse {
+pub enum NodeContentResponse {
     #[response(status = 400)]
     WrongDecoding(String),
     #[response(status = 404)]
     PathNotFound(String),
-    #[response(status = 302)]
-    PathNotDir(String),
     #[response(status = 409)]
     DirError(String),
     #[response(status = 200)]
-    FolderData(Json<NetFolder>)
+    NodeData(Json<NetNode>)
 
 }
 
 
-fn to_abs_data_path(user: &UserID, path: &str) -> Result<PathBuf, ()> {
-
-    if path.contains("..") {
-        return Err(());
-    }
-    let rpath = Path::new(path);
-
+fn to_abs_data_path<P: AsRef<Path>>(user: &UserID, p: P) -> PathBuf {
+    let path: &Path = p.as_ref();
+    
     let mut root: PathBuf = PathBuf::from(crate::config::data_path());
     root.push(&user.0);
-    root.push(rpath.strip_prefix("/").map_err(|_| ())?);
-    Ok(root)
+    root.push(path);
+    root
 }
 
 use rocket::State;
 use super::database::SharedDatabase;
 
+pub fn url_encoded_to_rel_path(rs: &RawStr) -> Result<PathBuf, &'static str> {
+    let mut raw_path: String = match rs.percent_decode() {
+        Ok(s) => s.into_owned(),
+        Err(_) => { return Err("Not URL-encoded"); }
+    };
 
-#[get("/folder?<url_encoded_path>")]
-pub fn get_folder_content(url_encoded_path: &RawStr, user_id: UserID, db: State<SharedDatabase>) -> FolderContentResponse {
+    if raw_path.contains("..") {
+        // illegal 
+        // TODO are there other symbolic links or ways to escape the dir?
+        return Err(".. not allowed in path");
+    };
+
+    if raw_path.starts_with('/') { raw_path.remove(0); }
+
+    Ok(PathBuf::from(raw_path))
+}
+
+#[get("/node?<url_encoded_path>")]
+pub fn get_node_data(url_encoded_path: &RawStr, user_id: UserID, db: State<SharedDatabase>) -> NodeContentResponse {
  
     
-    let raw_path: String = match url_encoded_path.percent_decode() {
-        Ok(s) => s.into_owned(),
-        Err(e) => { return FolderContentResponse::WrongDecoding(e.to_string()); }
+
+    let folder_path = match url_encoded_to_rel_path(url_encoded_path) {
+        Ok(p) => p,
+        Err(e) => return NodeContentResponse::WrongDecoding(e.into())
     };
     
     
-    let combined = match to_abs_data_path(&user_id,&raw_path) {
-        Ok(c) => c,
-        Err(()) => return FolderContentResponse::WrongDecoding("Error in path".into())
-    };
+    let combined = to_abs_data_path(&user_id,&folder_path);
     let mut root: PathBuf = PathBuf::from(crate::config::data_path());
     root.push(&user_id.0);
     if !root.exists() {
@@ -80,36 +96,39 @@ pub fn get_folder_content(url_encoded_path: &RawStr, user_id: UserID, db: State<
     
     if !combined.exists() {
         // check if user has allready folder or needs to get created
-        return FolderContentResponse::PathNotFound("Path doesn't exist".into())
-    }
-    if !combined.is_dir() {
-        return FolderContentResponse::PathNotDir("Path isn't a folder".into())
+        return NodeContentResponse::PathNotFound("Path doesn't exist".into())
     }
 
-    let mut children_folder: Vec<String> = Vec::new();
-    let mut files: Vec<String> = Vec::new();
 
-    info!("get_folder_content on path {:?}", combined);
+    let mut children_folder: Option<Vec<String>> = None;
+    let mut files: Option<Vec<String>> = None;
 
-
-    match combined.read_dir() {
-        Err(e) => {
-            return FolderContentResponse::DirError(e.to_string())
-        },
-        Ok(dir) => {
-            for maybe_entry in dir {
-                if let Ok(e) = maybe_entry {
-                    if let Ok(ft) = e.file_type() {
-                        let fname = e.file_name().into_string().unwrap();
-                        if ft.is_dir() {
-                            children_folder.push(fname);
-                        }
-                        else if ft.is_file() {
-                            files.push(fname);
+    info!("get_node_data on path {:?}", combined);
+    let is_dir = combined.is_dir();
+    if is_dir {
+        match combined.read_dir() {
+            Err(e) => {
+                return NodeContentResponse::DirError(e.to_string())
+            },
+            Ok(dir) => {
+                children_folder = Some(Vec::new());
+                files = Some(Vec::new());
+                let cf = children_folder.as_mut().unwrap();
+                let f = files.as_mut().unwrap();
+                for maybe_entry in dir {
+                    if let Ok(e) = maybe_entry {
+                        if let Ok(ft) = e.file_type() {
+                            let fname = e.file_name().into_string().unwrap();
+                            if ft.is_dir() {
+                                cf.push(fname);
+                            }
+                            else if ft.is_file() {
+                                f.push(fname);
+                            }
                         }
                     }
-                }
-            } 
+                } 
+            }
         }
     }
 
@@ -122,11 +141,18 @@ pub fn get_folder_content(url_encoded_path: &RawStr, user_id: UserID, db: State<
         }
     }
 
-    FolderContentResponse::FolderData(Json(NetFolder {
+    let metadata = match metadata::get_metadata(&folder_path, &user_id, db) {
+        Some(md) => md,
+        None => return NodeContentResponse::DirError("Metadata fetch failed".into())
+    };
+
+    NodeContentResponse::NodeData(Json(NetNode {
         name: if path_from_root.len() == 0 { "".into() } else { name },
         children_folder,
         files,
-        path_from_root
+        path_from_root,
+        metadata ,
+        node_type: if is_dir { "folder" } else { "file" }
     }))
 }
 
@@ -149,17 +175,12 @@ pub enum FileDownloadResponse {
 pub fn download_file(path: &RawStr, token: UserID) -> FileDownloadResponse {
     info!("User {:?} requested download of {}", token, path);
 
-    let path = match path.percent_decode() {
-        Ok(s) => s.into_owned(),
-        Err(_) => { return FileDownloadResponse::NotFound(()); }
+    let folder_path = match url_encoded_to_rel_path(path) {
+        Ok(p) => p,
+        Err(e) => return FileDownloadResponse::NotFound(())
     };
 
-    let abs_path = match to_abs_data_path(&token, &path) {
-        Ok(p) => p,
-        Err(()) => {
-            println!("to_abs_data_path failed");
-            return FileDownloadResponse::NotFound(())}
-    };
+    let abs_path = to_abs_data_path(&token, &folder_path);
 
     if abs_path.is_dir() {
         // handle zip file

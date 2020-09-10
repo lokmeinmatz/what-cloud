@@ -2,9 +2,15 @@
   <div id="files">
     <main class="container-sm">
       <div class="header">
-        <PathDisplay :path="subPath" :mode="mode"/>
+        <PathDisplay :folder="pathDisplayObj" :mode="mode"/>
       </div>
-      <div v-if="folder != null">
+      <div v-if="folder == 'loading'" class="loading">
+        <div class="spinner-border" role="status">
+          <span class="sr-only">Loading...</span>
+        </div>
+        <h3>Loading data...</h3>
+      </div>
+      <div v-else-if="folder != null">
         <FileList :folder="folder"/>
       </div>
       <h3 v-else>This folder doesn't exist 😥</h3>
@@ -18,7 +24,7 @@
 import FileList from '../components/FileList'
 import PathDisplay from '../components/PathDisplay'
 import FileInfo from '../components/FileInfo'
-import { getFolder } from '../business/fs'
+import { getNode } from '../business/fs'
 import { state } from '../business/globalState'
 
 export default {
@@ -40,7 +46,7 @@ export default {
   },
   data() {
     return {
-      folder: null,
+      folder: 'loading',
       nodeInfo: null,
       mode: state.fileDisplayState.currentValue()
     }
@@ -48,9 +54,9 @@ export default {
   methods: {
     async updateFolder() {
       console.log('route changed', this.$route.path)
-      console.log(this.subPath)
       try {
-        this.folder = await getFolder(this.pathElmts)
+        this.folder = 'loading'
+        this.folder = await getNode(this.pathElmts)
         //console.log('successfully got new folder', this.folder)
         return
       }
@@ -67,9 +73,15 @@ export default {
     }
   },
   computed: {
+    pathDisplayObj() {
+      if (this.folder == 'loading') {
+        return {pathFromRoot: this.pathElmts, loading: true}
+      }
+      return this.folder
+    },
     pathElmts() {
       let r
-      switch (state.fileDisplayState.currentValue()) {
+      switch (state.fileDisplayState.currentValue().mode) {
         case 'files':
           r = this.$route.path.split('/').filter(e => e.trim().length > 0)
           break
@@ -82,19 +94,6 @@ export default {
       }
       r.shift()
       return r
-    },
-    subPath() {
-  
-      return this.pathElmts.reduce(([collector, prevPath], curr) => {
-        const npath = `${prevPath}/${curr}`
-        collector.push({segment: curr, filePath: npath})
-        return [collector, npath]
-      }, [[], ''])[0]
-      
-    },
-
-    isRoot() {
-      return this.subPath.length == 0
     }
   }
 }
@@ -120,6 +119,7 @@ export default {
   align-items: center;
   max-width: 100%;
   overflow-x: auto;
+  position: relative;
 }
 
 aside {

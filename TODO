@@ -6,9 +6,12 @@ Frontend:
   ✔ add Share option @done(20-09-09 17:53)
   ☐ show used storage space if calculated
 
+Refactor:
+  ☐ load /files/folder1/subfolder1 doesn't work, even though rootnode displays right structure @started(20-09-10 23:13)
+
 Features:
   Shared:
-    ☐ MyShares: implement basic folder / file sharing (via link) @started(20-09-07 17:15)
+    ✔ MyShares: implement basic folder / file sharing (via link) @started(20-09-07 17:15) @done(20-09-10 23:14) @lasted(3d5h59m3s)
     ☐ Shared files don't get deleted immedialtely but flagged with disabled - date
-    ☐ Display users active shared nodes @started(20-09-09 17:56)
+    ✔ Display users active shared nodes @started(20-09-09 17:56) @done(20-09-10 23:13) @lasted(1d5h18m)
     ☐ Check file access of shared if not logged in

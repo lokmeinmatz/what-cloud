@@ -36,10 +36,10 @@
               <label class="form-check-label" for="share-this">Share this folder</label>
             </td>
           </tr>
-          <tr v-if="file.shared">
-            <td>Shared-URL<br/>Click to copy</td>
+          <tr v-if="file.shared && updateCopyTooltip()">
+            <td>Shared-URL</td>
             <td>
-              <input @click="copyShared" readonly type="text" ref="sharedLink" :value="sharedLink"/>
+              <input @click="copyShared" readonly type="text" ref="sharedLink" :value="sharedLink" data-toggle="tooltip" title="Click to copy"/>
             </td>
           </tr>
         </tbody>
@@ -61,24 +61,14 @@ export default {
       fetchingMeta: false,
     };
   },
-  async mounted() {
-    await this.loadMeta();
-  },
-  watch: {
-    file: async function (newFile) {
-      await this.loadMeta();
-    },
-  },
   props: {
     file: Node,
   },
   methods: {
-    async loadMeta() {
-      if (!this.file.fetched) {
-        this.fetchingMeta = true;
-        await this.file.loadMetadata();
-        this.fetchingMeta = false;
-      }
+    updateCopyTooltip() {
+      console.log('init tooltip')
+      window.$(this.$refs.sharedLink).tooltip()
+      return true
     },
     close() {
       state.nodeInfoDisplay.emit(null);
@@ -107,6 +97,7 @@ export default {
       set(v) {
         console.log('Setting share of curr node:', v)
         this.file.setShared(v)
+        this.$emit('data-updated')
       }
     }
   },

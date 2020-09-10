@@ -2,6 +2,12 @@ import store from '../store'
 import router from '../router'
 import { state } from './globalState'
 
+async function delay(ms) {
+    return new Promise((res, rej) => {
+        setTimeout(() => res(), ms)
+    })
+} 
+
 export class Node {
     /**
      * @param {Object} obj
@@ -13,7 +19,7 @@ export class Node {
     constructor({ name, pathFromRoot, fetched, shared }) {
         this.name = name
         this.pathFromRoot = pathFromRoot
-        this.fetched = fetched != null ? fetched : false
+        this.fetched = fetched != undefined ? fetched : false
         this.type = 'node'
         this.size = -1
         this.lastModified = '',
@@ -64,35 +70,53 @@ export class Node {
         if (res.length == 0) this.shared = null
         else this.shared = res 
     }
-
-    async loadMetadata() {
-        const url = `/api/metadata?url_encoded_path=${encodeURIComponent(pathArrayToString(this.pathFromRoot))}`
-        console.log(`Fetching metadata via ${url}`)
-        let res
-        try {
-            res = await fetch(url, {
-                headers: {
-                    'Authorization': `Bearer ${store.state.auth.user.auth_token}`
-                }
-            })
-            if (res.status != 200) {
-                return false
-            }
-            res = await res.json()
-        }
-        catch (e) {
-            console.error(e)
-            return false
-        }
-
-        //console.log(res)
-        this.size = res.size
-        this.lastModified = res.lastModified
-        this.fetched = true
-        this.shared = res.shared
-    }
 }
 
+/**
+ * 
+ * @param {string | string[]} path either / separated string or allready split
+ * @returns {Node}
+ */
+export async function getNode(path) {
+    if (typeof path == 'string') path = path.split('/').filter(e => e.length > 0)
+    let pIdx = 0
+    /**
+     * @type {Folder}
+     */
+    let curr = window.rootNode
+    if (curr == undefined) {
+        console.error('rootNode undefined, tried to getNode()')
+        return undefined
+    }
+    while (path.length > pIdx && curr != undefined) {
+        let seg = path[pIdx]
+        
+        if (!curr.fetched) curr = await getNodeCacheOrFetch({ currNode: window.rootNode, pathRemaining: path, pathFromRoot: [], parentFolder: null })
+        
+        //debugger
+        // search for child that matches seg
+        curr = curr.children.find(n => n.name == seg)
+        pIdx++
+    }
+    return curr
+}
+
+/**
+ * 
+ * @param {Array<{path: string, share_id: string}>} shared 
+ * @returns {Node[]} all files / folders that are shared
+ */
+export async function updateShared(shared) {
+    let res = []
+    for(let entry of shared) {
+        const f = await getNode(entry.path)
+        if (f) {
+            res.push(f)
+            f.shared = entry.share_id
+        }
+    }
+    return res
+}
 
 export class Folder extends Node {
     /**
@@ -147,34 +171,24 @@ export function reset() {
 
 reset()
 
-/**
- * 
- * @param {string[]} path 
- */
-export async function getFolder(path) {
-    console.log('getFolder', path)
-    const res = await getFolderCacheOrFetch({ currFolder: window.rootNode, pathRemaining: path, pathFromRoot: [], parentFolder: null })
-    //console.log(res)
-    return res
-}
 
 
 /**
  * @param {Object} obj
- * @param {Folder} obj.currFolder 
+ * @param {Node} obj.currNode 
  * @param {string[]} obj.pathRemaining 
  * @param {string[]} obj.pathFromRoot
  * @param {Folder} obj.parentFolder
- * @returns {Folder | null}
+ * @returns {File | Folder | null}
  * 
  * returns the folder from cache or fetches new
  */
-async function getFolderCacheOrFetch({ currFolder, pathRemaining, pathFromRoot, parentFolder }) {
+async function getNodeCacheOrFetch({ currNode, pathRemaining, pathFromRoot, parentFolder }) {
 
-    if (!currFolder.fetched) {
+    if (!currNode.fetched) {
         // fetch from server
-        const url = `/api/folder?url_encoded_path=${encodeURIComponent(pathArrayToString(pathFromRoot))}`
-        console.log(`Folder ${pathArrayToString(pathFromRoot)} not loaded, fetching via ${url}`)
+        const url = `/api/node?url_encoded_path=${encodeURIComponent(pathArrayToString(pathFromRoot))}`
+        console.log(`Node ${pathArrayToString(pathFromRoot)} not loaded, fetching via ${url}`)
         let res
         try {
             res = await fetch(url, {
@@ -190,30 +204,47 @@ async function getFolderCacheOrFetch({ currFolder, pathRemaining, pathFromRoot, 
 
         if (res.ok) {
             //console.log('res ok')
-            const folder = await res.json()
-            console.log('fetched val:', folder)
-            currFolder = new Folder({
-                children: [
-                    ...folder.childrenFolder.map(f => new Folder({ name: f, pathFromRoot: folder.pathFromRoot.concat([f]), shared: null })),
-                    ...folder.files.map(f => new File({ name: f, pathFromRoot: folder.pathFromRoot.concat([f]).filter(e => e.length > 0), shared: null }))],
-                name: folder.name,
-                pathFromRoot: folder.pathFromRoot
-            })
-            //console.log(currFolder.children)
-            if (currFolder.pathFromRoot.length == 0) {
-                window.rootNode = currFolder
+            const snode = await res.json()
+            console.log('fetched val:', snode)
+            if (snode.type == 'folder') {
+                console.log('got folder')
+                currNode = new Folder({
+                    children: [
+                        ...snode.childrenFolder.map(f => new Folder({ name: f, pathFromRoot: snode.pathFromRoot.concat([f]), shared: null })),
+                        ...snode.files.map(f => new File({ name: f, pathFromRoot: snode.pathFromRoot.concat([f]).filter(e => e.length > 0), shared: null }))],
+                        name: snode.name,
+                        pathFromRoot: snode.pathFromRoot
+                    })
+                } else if (snode.type == 'file') {
+                    console.log('got file')
+                    currNode = new File({
+                    name: snode.name,
+                    pathFromRoot: snode.pathFromRoot,
+                })
+            } else {
+                console.error('unknown node type: ', snode.type)
+                return null
+            }
+
+            currNode.size = res.size
+            currNode.lastModified = res.lastModified
+            //this.fetched = true
+            currNode.shared = res.shared
+
+            if (currNode.pathFromRoot.length == 0) {
+                window.rootNode = currNode
                 console.log('new root node:', window.rootNode)
             } else {
                 parentFolder.children = parentFolder.children.filter(f => {
-                    return !(f.name == currFolder.name && f instanceof Folder)
+                    // folders and files cannot have the same name
+                    return !(f.name == currNode.name)
                 })
-                parentFolder.children.push(currFolder)
+                parentFolder.children.push(currNode)
                 //console.log('parent', parentFolder)
             }
-            //console.log(currFolder)
         }
         else {
-            console.error('folder req failed: ', res.status)
+            console.error('node req failed: ', res.status)
             if (res.status == 401) {
                 store.commit('auth/setUser', null, { root: true })
                 router.push('/login')
@@ -223,16 +254,16 @@ async function getFolderCacheOrFetch({ currFolder, pathRemaining, pathFromRoot, 
             throw res.statusText
         }
     }
-    if (pathRemaining.length == 0) return currFolder
+    if (pathRemaining.length == 0) return currNode
     const next = pathRemaining.splice(0, 1)[0]
-    const nchild = currFolder.children.find(f => f.name == next && f instanceof Folder)
+    const nchild = currNode.children.find(f => f.name == next)
     //debugger
     if (nchild == null) {
         return null
     }
     //console.log('next', next)
     pathFromRoot.push(next)
-    return getFolderCacheOrFetch({ currFolder: nchild, pathRemaining, pathFromRoot, parentFolder: currFolder })
+    return getNodeCacheOrFetch({ currNode: nchild, pathRemaining, pathFromRoot, parentFolder: currNode })
 }
 
 
@@ -245,15 +276,3 @@ export function pathArrayToString(path) {
     //console.log(path)
     return '/' + path.join('/')
 }
-
-/**
- * @param {Object} obj
- * @param {ActionContext} obj.actionContext
- * @param {File} obj.currFolder
- * @param {string[]} obj.pathRemaining
- * @param {string[]} obj.pathFromRoot
- * @param {File} obj.parentFolder
- * @returns {File | null}
- *
- * returns the folder from cache or fetches new
- */

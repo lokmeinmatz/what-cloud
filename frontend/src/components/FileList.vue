@@ -1,6 +1,6 @@
 <template>
   <div class="list-group">
-    <FSItem v-for="file in content" class="list-group-item" :basePath="basePath" :key="file.name" :file="file"/>
+    <FSItem v-for="file in content" class="list-group-item" :key="file.name" :file="file"/>
   </div>
 </template>
 
@@ -17,9 +17,6 @@ export default {
   computed: {
     content() {
       return this.folder.children
-    },
-    basePath() {
-      return this.$route.path
     }
   }
 }

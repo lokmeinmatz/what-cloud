@@ -3,7 +3,12 @@
     <main v-if="$store.getters['auth/isLoggedIn']" class="container-sm">
       <h2>Here you can see all your shares</h2>
       <div class="list-group">
-        <FSItem v-for="entry in sharedEntries" class="list-group-item" :basePath="basePath" :key="entry.share_id" :file="file"/>
+        <FSItem
+          v-for="entry in sharedEntries"
+          class="list-group-item"
+          :key="entry.shared"
+          :file="entry"
+        />
       </div>
     </main>
     <main v-else class="container-sm">
@@ -11,51 +16,67 @@
       <p>Did you want to see a shared folder? Make sure to copy the whole URL!</p>
       <p>It should have some random characters after /shared/...</p>
     </main>
+    <aside :class="{display: nodeInfo != null}">
+      <FileInfo class="display" :file="nodeInfo" v-if="nodeInfo != null" @data-updated="updateSharedList" />
+    </aside>
   </div>
 </template>
 <script>
-import FileList from "../components/FileList";
+import FSItem from "../components/FSItem";
 import PathDisplay from "../components/PathDisplay";
 import FileInfo from "../components/FileInfo";
-import { getFolder } from "../business/fs";
+import { updateShared } from "../business/fs";
 import { state } from "../business/globalState";
 
 export default {
+  name: "SharedList",
   components: {
-    FileList,
+    FSItem,
     PathDisplay,
     FileInfo,
   },
   async mounted() {
-    const url = "/api/shared";
-    let res;
-    try {
-      res = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${this.$store.state.auth.user.auth_token}`,
-        },
+    console.log(this)
+    await this.updateSharedList();
+  },
+  methods: {
+    async updateSharedList() {
+      if (!this.$store.getters["auth/isLoggedIn"]) return;
+
+      state.nodeInfoDisplay.subscribeWithId("files", (f) => {
+        this.nodeInfo = f;
       });
-    } catch (e) {
-      console.error(e);
-      return null;
-    }
 
-    if (res.ok) {
-      this.sharedEntries = await res.json()
-      
-    }
+      const url = "/api/shared";
+      let res;
+      try {
+        res = await fetch(url, {
+          headers: {
+            Authorization: `Bearer ${this.$store.state.auth.user.auth_token}`,
+          },
+        });
+      } catch (e) {
+        console.error(e);
+        return null;
+      }
 
+      if (res.ok) {
+        let sharedEntries = await res.json();
+
+        this.sharedEntries = await updateShared(sharedEntries);
+      }
+    },
   },
   data() {
     return {
       sharedEntries: [],
+      nodeInfo: null,
     };
   },
-  methods: {},
 };
 </script>
 <style scoped>
-#files {
+#shared {
   position: relative;
   display: grid;
   grid-template-columns: auto min-content;
@@ -87,7 +108,7 @@ aside {
 }
 
 @media only screen and (max-width: 768px) {
-  #files {
+  #shared {
     grid-template-columns: 1fr;
   }
 
