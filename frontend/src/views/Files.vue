@@ -35,7 +35,7 @@ export default {
   },
   async mounted() {
     state.nodeInfoDisplay.subscribeWithId('files', f => {
-      this.nodeInfo = f
+      if (f.fetched) this.nodeInfo = f
     })
 
     state.fileDisplayState.subscribeWithId('files', s => {
@@ -61,7 +61,7 @@ export default {
         return
       }
       catch (e) {
-        console.error(e)
+        console.error('updateFolder() failed', e)
         this.folder = null
       }
     }

@@ -7,7 +7,8 @@ Frontend:
   ☐ show used storage space if calculated
 
 Refactor:
-  ☐ load /files/folder1/subfolder1 doesn't work, even though rootnode displays right structure @started(20-09-10 23:13)
+  ✔ load /files/folder1/subfolder1 doesn't work, even though rootnode displays right structure @started(20-09-10 23:13) @done(20-09-11 15:28) @lasted(16h15m58s)
+  ☐ state.nodeInfoDisplay sometimes contains Promise, so check where this gets written
 
 Features:
   Shared:

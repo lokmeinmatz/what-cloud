@@ -45,7 +45,7 @@ export class Node {
      */
     async setShared(enabled) {
         const url = `/api/folder/shared?url_encoded_path=${encodeURIComponent(pathArrayToString(this.pathFromRoot))}${enabled ? '&enabled=true' : ''}`
-        console.log(`Updating shared setting for node ${this.path()}`)
+        //console.log(`Updating shared setting for node ${this.path()}`)
 
         let res
         try {
@@ -72,6 +72,14 @@ export class Node {
     }
 }
 
+// set up listener on state nodeinfo change to fetch if isn't fetched
+state.nodeInfoDisplay.subscribeWithId('fs-fetch', async fr => {
+    console.log(fr)
+    if (fr != null && !fr.fetched) state.nodeInfoDisplay.emit( await getNode(fr.pathFromRoot) )
+})
+
+
+
 /**
  * 
  * @param {string | string[]} path either / separated string or allready split
@@ -79,24 +87,15 @@ export class Node {
  */
 export async function getNode(path) {
     if (typeof path == 'string') path = path.split('/').filter(e => e.length > 0)
-    let pIdx = 0
     /**
-     * @type {Folder}
+     * @type {Node}
      */
-    let curr = window.rootNode
-    if (curr == undefined) {
-        console.error('rootNode undefined, tried to getNode()')
-        return undefined
-    }
-    while (path.length > pIdx && curr != undefined) {
-        let seg = path[pIdx]
-        
-        if (!curr.fetched) curr = await getNodeCacheOrFetch({ currNode: window.rootNode, pathRemaining: path, pathFromRoot: [], parentFolder: null })
-        
-        //debugger
-        // search for child that matches seg
-        curr = curr.children.find(n => n.name == seg)
-        pIdx++
+    const curr = await getNodeCacheOrFetch({ currNode: window.rootNode, pathRemaining: path, pathFromRoot: [], parentFolder: null })
+   
+    console.log('getNode', curr)
+    if (!curr.fetched) {
+        console.error('node isnt fetched, something went wrong')
+        return null
     }
     return curr
 }
@@ -207,7 +206,7 @@ async function getNodeCacheOrFetch({ currNode, pathRemaining, pathFromRoot, pare
             const snode = await res.json()
             console.log('fetched val:', snode)
             if (snode.type == 'folder') {
-                console.log('got folder')
+                
                 currNode = new Folder({
                     children: [
                         ...snode.childrenFolder.map(f => new Folder({ name: f, pathFromRoot: snode.pathFromRoot.concat([f]), shared: null })),
@@ -216,7 +215,7 @@ async function getNodeCacheOrFetch({ currNode, pathRemaining, pathFromRoot, pare
                         pathFromRoot: snode.pathFromRoot
                     })
                 } else if (snode.type == 'file') {
-                    console.log('got file')
+                    
                     currNode = new File({
                     name: snode.name,
                     pathFromRoot: snode.pathFromRoot,
@@ -226,21 +225,19 @@ async function getNodeCacheOrFetch({ currNode, pathRemaining, pathFromRoot, pare
                 return null
             }
 
-            currNode.size = res.size
-            currNode.lastModified = res.lastModified
-            //this.fetched = true
-            currNode.shared = res.shared
+            currNode.size = snode.metadata.size
+            currNode.lastModified = snode.metadata.lastModified
+            currNode.fetched = true
+            currNode.shared = snode.metadata.shared
 
             if (currNode.pathFromRoot.length == 0) {
                 window.rootNode = currNode
-                console.log('new root node:', window.rootNode)
             } else {
                 parentFolder.children = parentFolder.children.filter(f => {
                     // folders and files cannot have the same name
                     return !(f.name == currNode.name)
                 })
                 parentFolder.children.push(currNode)
-                //console.log('parent', parentFolder)
             }
         }
         else {

@@ -34,10 +34,12 @@
       </router-link>
     </div>
     <DownloadButton v-if="!folder.loading" class="download" :file="folder" />
+    <button class="btn btn-primary" @click.stop="showInfo">Infos</button>
   </div>
 </template>
 
 <script>
+import { state } from '../business/globalState'
 import { Node } from "../business/fs";
 import DownloadButton from './DownloadButton.vue'
 
@@ -49,6 +51,11 @@ export default {
   props: {
     folder: Object,
     mode: Object,
+  },
+  methods: {
+    showInfo() {
+      state.nodeInfoDisplay.emit(this.folder);
+    }
   },
   computed: {
     path() {
@@ -65,9 +72,10 @@ export default {
 <style scoped>
 .path-display {
   display: grid;
-  grid-template-columns: min-content auto 3em;
+  grid-template-columns: min-content auto 3em 4em;
   height: 3em;
   width: 100%;
+  gap: 0.5em;
 }
 
 .download {
@@ -75,7 +83,7 @@ export default {
 }
 
 
-.btn {
+.btn-group .btn {
   display: flex;
   align-items: center;
   background-color: rgba(120, 120, 120, 0.1);
@@ -86,11 +94,11 @@ export default {
   margin-left: 0.5em;
 }
 
-.btn:last-child {
+.btn-group .btn:last-child {
   background-color: rgba(120, 120, 120, 0.15);
 }
 
-.btn:hover {
+.btn-group .btn:hover {
   background-color: rgba(120, 120, 150, 0.2);
 }
 </style>
