@@ -7,6 +7,7 @@ use log::{info};
 use crate::database::SharedDatabase;
 use crate::token_validizer::token_storage;
 use rocket::request::{FromRequest, Outcome};
+use serde::Serialize;
 use serde_json::json;
 
 #[derive(Deserialize)]
@@ -22,7 +23,7 @@ pub struct UserLoginResponse {
     auth_token: String
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct UserID(pub String);
 
 impl std::fmt::Display for UserID {

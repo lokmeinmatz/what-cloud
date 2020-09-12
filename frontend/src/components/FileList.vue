@@ -6,7 +6,7 @@
 
 <script>
 import FSItem from './FSItem'
-import { Folder } from '../business/fs'
+import { Folder, Node } from '../business/fs'
 
 export default {
   name: 'FileList',
@@ -16,7 +16,15 @@ export default {
   },
   computed: {
     content() {
-      return this.folder.children
+      /**
+       * @type {Node[]}
+       */
+      const c = this.folder.children
+      return c.sort((a, b) => {
+        if (a.type == 'folder' && b.type != 'folder') return -1 
+        if (a.type != 'folder' && b.type == 'folder') return 1
+        return a.name.localeCompare(b.name)
+      })
     }
   }
 }

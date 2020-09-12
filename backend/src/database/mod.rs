@@ -2,8 +2,9 @@ use rusqlite::{Connection, params, Row};
 use std::sync::{Mutex, MutexGuard};
 use log::{info, trace};
 use std::convert::{TryFrom, TryInto};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use crate::auth::UserID;
+use crate::fs::shared::{SharedEntry, SharedID};
 
 pub struct SharedDatabase {
     conn: Mutex<Connection>
@@ -50,18 +51,41 @@ impl SharedDatabase {
         
     }
 
+
+    pub fn get_shared_entry(&self, maybe_shared_id: &str) -> Option<SharedEntry> {
+        let conn = self.conn();
+        // needs rusqlite::Error as E type because get()? returns Err(rusqlite::Error) even though it is never used
+        conn.query_row_and_then::<_,rusqlite::Error,_,_>("SELECT ID, USER, BASE_PATH FROM SHARED WHERE ID = ?", &[maybe_shared_id], |row| {
+            let id = SharedID::from_string_unchecked(row.get(0)?);
+            let user = UserID(row.get(1)?);
+            let path = row.get::<_, String>(2)?.into();
+            Ok(SharedEntry {
+                path,
+                share_id: id,
+                user
+            })
+        }).ok()
+    }
+
+    pub fn is_active_shared_id(&self, id: &str) -> bool {
+        let conn = self.conn();
+        // returns 1 if id exists in table
+        conn.query_row::<u32, _, _>("SELECT EXISTS(SELECT ID FROM SHARED WHERE ID = ?)", &[id], |r| r.get(0)).unwrap() == 1
+    }
+
     pub fn get_all_shared(&self, user_id: &UserID) -> Vec<crate::fs::shared::SharedEntry> {
         let conn = self.conn();
         let mut prep = conn.prepare("SELECT ID, BASE_PATH FROM SHARED WHERE USER = ?").unwrap();
 
         prep.query_map(
             params![&user_id.0], 
-            |r| {Ok((r.get(0), r.get(1)))}).unwrap()
+            |r| {Ok((r.get(0), r.get::<_, String>(1)))}).unwrap()
         .filter_map(|r| {
             match r {
                 Ok((Ok(id), Ok(path))) => Some(crate::fs::shared::SharedEntry {
-                    path,
-                    share_id: id
+                    path: PathBuf::from(path),
+                    user: user_id.clone(),
+                    share_id: SharedID::from_string_unchecked(id)
                 }),
                 _ => None
             }

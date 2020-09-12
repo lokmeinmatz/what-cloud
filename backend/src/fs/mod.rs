@@ -55,6 +55,7 @@ fn to_abs_data_path<P: AsRef<Path>>(user: &UserID, p: P) -> PathBuf {
 
 use rocket::State;
 use super::database::SharedDatabase;
+use shared::SharedID;
 
 pub fn url_encoded_to_rel_path(rs: &RawStr) -> Result<PathBuf, &'static str> {
     let mut raw_path: String = match rs.percent_decode() {
@@ -73,9 +74,32 @@ pub fn url_encoded_to_rel_path(rs: &RawStr) -> Result<PathBuf, &'static str> {
     Ok(PathBuf::from(raw_path))
 }
 
+
+#[get("/node?<url_encoded_path>&<shared_id>")]
+pub fn get_node_shared(url_encoded_path: &RawStr, db: State<SharedDatabase>, shared_id: String) -> NodeContentResponse {
+    
+    // check if shared id is allowed
+    if let Some(se) = db.get_shared_entry(&shared_id) {
+    
+        let folder_path = match url_encoded_to_rel_path(url_encoded_path) {
+            Ok(p) => p,
+            Err(e) => return NodeContentResponse::WrongDecoding(e.into())
+        };
+
+        let share_path = dbg!(se.path.join(folder_path));
+
+        get_node(&share_path, se.user)
+    }
+    else {
+        NodeContentResponse::PathNotFound("Shared ID doesn't exist".into())
+    }
+}
+
+
 #[get("/node?<url_encoded_path>")]
 pub fn get_node_data(url_encoded_path: &RawStr, user_id: UserID, db: State<SharedDatabase>) -> NodeContentResponse {
  
+    
     
 
     let folder_path = match url_encoded_to_rel_path(url_encoded_path) {
@@ -154,6 +178,10 @@ pub fn get_node_data(url_encoded_path: &RawStr, user_id: UserID, db: State<Share
         metadata ,
         node_type: if is_dir { "folder" } else { "file" }
     }))
+}
+
+fn get_node(folder_path: &Path, user_id: UserID) -> NodeContentResponse {
+    unimplemented!()
 }
 
 

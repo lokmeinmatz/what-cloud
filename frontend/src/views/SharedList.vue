@@ -44,7 +44,8 @@ export default {
       if (!this.$store.getters["auth/isLoggedIn"]) return;
 
       state.nodeInfoDisplay.subscribeWithId("files", (f) => {
-        if (f.fetched) this.nodeInfo = f
+        if (f != null && f.fetched) this.nodeInfo = f
+        else this.nodeInfo = null
       });
 
       const url = "/api/shared";

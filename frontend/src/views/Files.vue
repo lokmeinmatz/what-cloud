@@ -35,7 +35,8 @@ export default {
   },
   async mounted() {
     state.nodeInfoDisplay.subscribeWithId('files', f => {
-      if (f.fetched) this.nodeInfo = f
+      if (f != null && f.fetched) this.nodeInfo = f
+      else this.nodeInfo = null
     })
 
     state.fileDisplayState.subscribeWithId('files', s => {
