@@ -11,45 +11,46 @@
         </div>
         <div class="form-group">
           <label for="password">Password</label>
-          <input name="password" autocomplete="password" type="password" v-model="password_raw" class="form-control" id="password" placeholder="Password">
+          <input name="password" autocomplete="password" type="password" v-model="passwordRaw" class="form-control" id="password" placeholder="Password">
         </div>
         <button class="btn btn-success" type="submit">Login</button>
       </form>
     </div>
   </main>
 </template>
-<script>
+<script lang="ts">
+import { defineComponent } from 'vue'
+import { store } from '../store'
 
-
-export default {
+export default defineComponent({
   name: 'Login',
   data() {
     return {
       name: '',
-      password_raw: '',
-      logging_in: false
+      passwordRaw: '',
+      loggingIn: false
     }
   },
   methods: {
     async login() {
-      if (this.name.length < 1 || this.password_raw.length < 1) {
+      if (this.name.length < 1 || this.passwordRaw.length < 1) {
         alert('Please enter username and password')
         return
       }
       console.log('logging in...')
-      this.logging_in = true
+      this.loggingIn = true
       try {
-        await this.$store.dispatch('auth/login', {name: this.name, password: this.password_raw})
-        this.logging_in = false
+        await store.auth.logIn(this.name, this.passwordRaw)
+        this.loggingIn = false
         this.$router.push('/')
       } catch (error) {
         alert(error)
-        this.logging_in = false
+        this.loggingIn = false
       }
 
     }
   }
-}
+})
 </script>
 <style scoped>
 h1 {

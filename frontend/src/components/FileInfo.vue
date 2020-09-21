@@ -1,5 +1,5 @@
 <template>
-  <div class="card" id="file-info" v-if="file != null">
+  <div class="card" id="file-info">
     <div class="card-header" style="display: grid; grid-template-columns: auto min-content;">
       <p style="margin: 0; vertical-align: center;">File Info</p>
       <button class="btn btn-outline-danger" style="padding: 0.5em; display: grid;" @click="close">
@@ -32,14 +32,14 @@
           <tr>
             <td>Share</td>
             <td>
-              <input class="form-check-input" type="checkbox" value id="share-this" v-model="sharedToggle"/>
+              <input class="form-check-input" type="checkbox" file id="share-this" v-model="sharedToggle"/>
               <label class="form-check-label" for="share-this">Share this folder</label>
             </td>
           </tr>
-          <tr v-if="file.shared && updateCopyTooltip()">
+          <tr v-if="file.shared">
             <td>Shared-URL</td>
             <td>
-              <input @click="copyShared" readonly type="text" ref="sharedLink" :value="sharedLink" data-toggle="tooltip" title="Click to copy"/>
+              <input @click="copyShared" readonly type="text" ref="sharedLink" :value="file.sharedLink()" data-toggle="tooltip" title="Click to copy"/>
             </td>
           </tr>
         </tbody>
@@ -48,13 +48,13 @@
   </div>
 </template>
 
-<script>
-import FSItem from "./FSItem";
+
+<script lang="ts">
+import { defineComponent } from 'vue'
 import { Node } from "../business/fs";
 import { ByteToFormattedString } from "../business/utils";
-import { state } from "../business/globalState";
 
-export default {
+export default defineComponent({
   name: "FileInfo",
   data() {
     return {
@@ -62,52 +62,44 @@ export default {
     };
   },
   props: {
-    file: Node,
+    file: {type: Node},
   },
   methods: {
-    updateCopyTooltip() {
-      console.log('init tooltip')
-      window.$(this.$refs.sharedLink).tooltip()
-      return true
-    },
     close() {
-      state.nodeInfoDisplay.emit(null);
+      this.$emit('update:file', null)
     },
     copyShared() {
-      console.log(this.$refs.sharedLink)
-      this.$refs.sharedLink.select()
+      console.log(this.$refs.sharedLink);
+      (this.$refs.sharedLink as HTMLInputElement).select()
       document.execCommand('copy')
       console.log('copied shared path')
     }
   },
   computed: {
-    fileSize() {
+    fileSize(): string {
+      const v = this.file as Node
       return (
-        (this.file.type == "folder" ? "≥" : "") +
-        (this.file.fetched ? ByteToFormattedString(this.file.size) : "unknown")
+        (v.type == "folder" ? "≥" : "") +
+        (v.fetched ? ByteToFormattedString(v.size) : "unknown")
       );
     },
 
-    sharedLink() {
-      return this.file.sharedLink()
-    },
-
     sharedToggle: {
-      get() { return this.file.shared },
-      set(v) {
-        console.log('Setting share of curr node:', v)
-        this.file.setShared(v)
+      get(): boolean { return (this.file as Node).shared != null },
+      set(v: boolean) {
+        console.log('Setting share of curr node:', v);
+        (this.file as Node).setShared(v)
         this.$emit('data-updated')
       }
     }
   },
-};
+})
 </script>
 
 <style scoped>
 #file-info {
   align-self: center;
-  /*width: 30em;*/
+  width: 100%;
   max-width: 90vw;
 }
 .card-title {

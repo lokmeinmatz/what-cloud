@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { Node } from '../business/fs'
 
 export interface User {
@@ -26,9 +26,13 @@ export class SharedDisplayMode extends DisplayMode {
     }
 }
 
+const maybeUser = localStorage.getItem('user_ref')
+// TODO use refresh token to revalidate auth_token
+if (maybeUser) console.log('loaded user from localStorage...')
+
 export const store =  {
     auth: {
-        user: ref<User | null>(null),
+        user: ref<User | null>((maybeUser != null) ? JSON.parse(maybeUser) : null),
         async logIn(name: string, password: string) {
             const url = '/api/user/login'
             console.log(url)
@@ -58,3 +62,9 @@ export const store =  {
     rootNode: ref<Node | null>(null),
     baseUrl: location.protocol + '//' +location.host
 } as const
+console.log(store.auth.user.value)
+watch(store.auth.user, user => {
+    console.log('updated localStorage user')
+    if (user != null) localStorage.setItem('user_ref', JSON.stringify(user))
+    else localStorage.removeItem('user_ref')
+})

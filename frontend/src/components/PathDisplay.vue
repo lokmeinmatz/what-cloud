@@ -38,35 +38,43 @@
   </div>
 </template>
 
-<script>
-import { state } from '../business/globalState'
-import { Node } from "../business/fs";
+
+<script lang="ts">
+import { defineComponent, PropType } from 'vue'
+import { Folder, Node } from "../business/fs";
+import { DisplayMode } from '../store';
 import DownloadButton from './DownloadButton.vue'
 
-export default {
+export default defineComponent({
   name: "PathDisplay",
   components: {
     DownloadButton
   },
   props: {
-    folder: Object,
-    mode: Object,
+    folder: Object as PropType<Node | {pathFromRoot: string[]; loading: boolean}>,
+    mode: DisplayMode,
   },
   methods: {
     showInfo() {
-      state.nodeInfoDisplay.emit(this.folder);
+      this.$emit('nodeinfo-requested', this.folder)
     }
   },
   computed: {
-    path() {
-      return this.folder.pathFromRoot.reduce(([collector, prevPath], curr) => {
-        const npath = `${prevPath}/${curr}`
-        collector.push({segment: curr, filePath: npath})
-        return [collector, npath]
-      }, [[], ''])[0]
+    // TODO duplicate code
+    path(): Array<{segment: string; filePath: string}> {
+
+      const res = []
+      let prevPath = ''
+      for (const seg of (this.folder as Folder).pathFromRoot) {
+        const npath = `${prevPath}/${seg}`
+        res.push({segment: seg, filePath: npath})
+        prevPath = npath
+      }
+
+      return res
     }
   }
-};
+})
 </script>
 
 <style scoped>

@@ -1,5 +1,5 @@
 export function mbToFormattedString(mb: number): string {
-    if (mb < 1000) return `${mb}MB`
+    if (mb < 1000) return `${mb.toFixed(1)}MB`
     if (mb < 1000000) return `${(mb/1024).toFixed(1)}GB`
     return `${(mb/(1024*1024)).toFixed(1)}TB`
 }
@@ -24,7 +24,7 @@ export function randString(length: number): string {
  }
 
  export async function delay(ms: number) {
-    return new Promise((res, rej) => {
+    return new Promise(res => {
         setTimeout(() => res(), ms)
     })
 } 

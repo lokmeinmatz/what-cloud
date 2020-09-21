@@ -1,8 +1,8 @@
 <template>
-  <div id="files">
+  <div id="files" :class="{'display-node-info': nodeInfo != null}">
     <main class="container-sm">
       <div class="header">
-        <PathDisplay :folder="pathDisplayObj" :mode="mode"/>
+        <PathDisplay :folder="pathDisplayObj" :mode="mode" @nodeinfo-requested="nodeInfo = $event"/>
       </div>
       <div v-if="folder == 'loading'" class="loading">
         <div class="spinner-border" role="status">
@@ -11,105 +11,109 @@
         <h3>Loading data...</h3>
       </div>
       <div v-else-if="folder != null">
-        <FileList :folder="folder"/>
+        <FileList :folder="folder" @nodeinfo-requested="nodeInfo = $event"/>
       </div>
       <h3 v-else>This folder doesn't exist 😥</h3>
     </main>
     <aside :class="{display: nodeInfo != null}">
-      <FileInfo class="display" :file="nodeInfo" v-if="nodeInfo != null"/>
+      <FileInfo class="display" v-if="nodeInfo != null" v-model:file="nodeInfo"/>
     </aside>
   </div>
 </template>
-<script>
-import FileList from '../components/FileList'
-import PathDisplay from '../components/PathDisplay'
-import FileInfo from '../components/FileInfo'
-import { getNode } from '../business/fs'
-import { state } from '../business/globalState'
+<script lang="ts">
+// eslint-disable
+import { computed, defineComponent, ref, watch } from 'vue'
+import FileList from '../components/FileList.vue'
+import PathDisplay from '../components/PathDisplay.vue'
+import FileInfo from '../components/FileInfo.vue'
+import { store, MyFilesDisplayMode, SharedDisplayMode } from '../store'
+import { getNode, Node } from '../business/fs'
+import router from '../router'
 
-export default {
+
+
+export default defineComponent({
+  name: 'Files',
   components: {
     FileList,
     PathDisplay,
     FileInfo
   },
-  async mounted() {
-    state.nodeInfoDisplay.subscribeWithId('files', f => {
-      if (f != null && f.fetched) this.nodeInfo = f
-      else this.nodeInfo = null
+  setup() {
+    const folder = ref<string |Node>('loading')
+    const nodeInfo = ref<Node | null>(null)
+    const mode = store.displayMode
+
+    const pathElements = computed<string[]>(() => {
+      let r
+      const mode = store.displayMode.value
+      if (mode instanceof MyFilesDisplayMode) {
+        r = router.currentRoute.value.path.split('/').filter(e => e.trim().length > 0)
+      } else 
+      if (mode instanceof SharedDisplayMode) {
+        r = router.currentRoute.value.path.split('/').filter(e => e.trim().length > 0)
+        r.shift() 
+      } else { return [] }
+
+      r.shift()
+      return r
     })
 
-    state.fileDisplayState.subscribeWithId('files', s => {
-      this.mode = s
+    const pathDisplayObj = computed(() => {
+      if (folder.value == 'loading') {
+        return {pathFromRoot: pathElements.value, loading: true}
+      }
+      return folder.value
     })
-
-    this.updateFolder()
-  },
-  data() {
-    return {
-      folder: 'loading',
-      nodeInfo: null,
-      mode: state.fileDisplayState.currentValue()
-    }
-  },
-  methods: {
-    async updateFolder() {
-      console.log('route changed', this.$route.path)
+    
+    const updateFolder = async () => {
+      console.log('route changed', router.currentRoute.value.path)
       try {
-        this.folder = 'loading'
-        this.folder = await getNode(this.pathElmts)
+        
+        folder.value = 'loading'
+        folder.value = await getNode(pathElements.value)
         //console.log('successfully got new folder', this.folder)
         return
       }
       catch (e) {
         console.error('updateFolder() failed', e)
-        this.folder = null
+        // TODO handle error better
+        folder.value = 'loading'
+        //this.folder = null
       }
     }
-  },
-  watch: {
-    
-    async $route() {
-      this.updateFolder()
-    }
-  },
-  computed: {
-    pathDisplayObj() {
-      if (this.folder == 'loading') {
-        return {pathFromRoot: this.pathElmts, loading: true}
-      }
-      return this.folder
-    },
-    pathElmts() {
-      let r
-      switch (state.fileDisplayState.currentValue().mode) {
-        case 'files':
-          r = this.$route.path.split('/').filter(e => e.trim().length > 0)
-          break
-        case 'shared':
-          r = this.$route.path.split('/').filter(e => e.trim().length > 0)
-          r.shift()
-          break
-        default:
-          return []
-      }
-      r.shift()
-      return r
+
+    // update folder on route change
+    watch(router.currentRoute, updateFolder)
+
+
+    updateFolder()
+    return {
+      folder,
+      nodeInfo,
+      mode,
+      updateFolder,
+      pathDisplayObj
     }
   }
-}
+})
 </script>
 <style scoped>
 
 #files {
   position: relative;
   display: grid;
-  grid-template-columns: auto min-content;
+  grid-template-columns: 100vw 25em;
   grid-template-rows: 100%;
   min-height: 100%;
   width: 100vw;
   align-content: stretch;
   overflow-x: hidden;
+  transition: grid-template-columns ease-out 0.3s;
+}
+
+#files.display-node-info {
+  grid-template-columns: calc(100vw - 25em) 25em;
 }
 
 .header {
@@ -125,13 +129,8 @@ export default {
 
 aside {
   display: flex;
-  transition: width ease-in-out 0.2s;
-  width: 0;
 }
 
-.display {
-  width: 25em;
-}
 
 @media only screen and (max-width: 768px) {
   #files {

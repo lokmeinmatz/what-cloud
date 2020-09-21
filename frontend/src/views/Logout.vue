@@ -6,15 +6,13 @@
     </div>
   </main>
 </template>
-<script>
-import { state } from '../business/globalState'
+<script lang="ts">
+import { defineComponent } from 'vue'
+import { store } from '../store'
 import * as fs from '../business/fs'
+import { delay } from '../business/utils'
 
-function timeout(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-export default {
+export default defineComponent({
   name: 'Logout',
   data() {
     return {
@@ -23,27 +21,28 @@ export default {
   },
   async mounted() {
       console.log('starting logout...')
-      window.rootNode = null
+      store.rootNode.value = null
       fs.reset()
-      await timeout(100)
+      await delay(100)
       this.progress = 25
-      state.nodeInfoDisplay.emit(null)
-      await timeout(100)
+      // TODO need to add this to Files.vue?
+      //state.nodeInfoDisplay.emit(null)
+      await delay(100)
       this.progress = 50
       await fetch('/api/user/logout', {
                 headers: {
-                    'Authorization': `Bearer ${this.$store.state.auth.user.auth_token}`
+                    'Authorization': `Bearer ${store.auth.user.value?.auth_token}`
                 }
             })
-      this.$store.commit('auth/setUser', null)
-      await timeout(100)
+      store.auth.user.value = null
+      await delay(100)
       this.progress = 75
       // TODO send logout to server
       console.log('logout completed')
-      await timeout(100)
+      await delay(100)
       this.$router.push('/login')
   }
-}
+})
 </script>
 <style scoped>
 h1 {

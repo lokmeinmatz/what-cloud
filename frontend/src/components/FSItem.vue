@@ -13,12 +13,13 @@
   </div>
 </template>
 
-<script>
+
+<script lang="ts">
+import { defineComponent } from 'vue'
 import { Node } from "../business/fs";
-import { state } from "../business/globalState";
 import DownloadButton from "./DownloadButton.vue";
 
-export default {
+export default defineComponent({
   name: "FSItem",
   components: {
     DownloadButton,
@@ -27,20 +28,19 @@ export default {
     file: Node,
   },
   methods: {
-    /**
-     * @param {MouseEvent} event
-     * @param {Node} file
-     */
-    showInfo(event, file) {
+    showInfo(event: MouseEvent, file: Node) {
       event.stopPropagation();
       event.preventDefault();
-      state.nodeInfoDisplay.emit(file);
+      this.$emit('nodeinfo-requested', file)
     },
   },
-};
+})
 </script>
 
 <style scoped>
+.fs-item a {
+  text-align: left;
+}
 .fs-item {
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr) 3em 4em;

@@ -1,6 +1,6 @@
 <template>
   <main class="container-md">
-    <h1>Welcome, {{$store.state.auth.user.name}}</h1>
+    <h1>Welcome, {{ userName }}</h1>
     <div class="card col-md-3">
       <div class="card-img-top">
         <div class="progress">
@@ -13,40 +13,43 @@
     </div>
   </main>
 </template>
-<script>
+<script lang="ts">
+import { computed, defineComponent, onMounted, ref } from 'vue'
 import { mbToFormattedString } from '../business/utils'
+import { store } from '../store' 
 
-
-export default {
+export default defineComponent({
   name: 'Home',
-  data() {
-    return {
-      interpolatedStorageUsed: 0
-    }
-  },
-  mounted() {
-    const targetStorageUsed = this.$store.getters['storage/storageUsed']
-    const smooth = () => {
-      const delta = targetStorageUsed - this.interpolatedStorageUsed
-      if (delta / targetStorageUsed > 0.01) {
-        this.interpolatedStorageUsed += delta * 0.05
-        requestAnimationFrame(smooth)
+  setup() {
+    const interpolatedStorageUsed = ref(0)
+    onMounted(() => {
+      const targetStorageUsed = 11.1
+      const smooth = () => {
+        const delta = targetStorageUsed - interpolatedStorageUsed.value
+        if (delta / targetStorageUsed > 0.01) {
+          interpolatedStorageUsed.value += delta * 0.05
+          requestAnimationFrame(smooth)
+        }
+        else {
+          // finish
+          console.log('storageUsed animation finished')
+          interpolatedStorageUsed.value = targetStorageUsed
+        }
       }
-      else {
-        // finish
-        console.log('storageUsed animation finished')
-        this.interpolatedStorageUsed = targetStorageUsed
-      }
-    }
 
-    requestAnimationFrame(smooth)
-  },
-  computed: {
-    storageUsed() {
-      return mbToFormattedString(this.interpolatedStorageUsed)
+      requestAnimationFrame(smooth)
+    })
+    const storageUsed = computed(() => {
+      return mbToFormattedString(interpolatedStorageUsed.value)
+    })
+
+    return {
+      interpolatedStorageUsed,
+      userName: store.auth.user.value?.name,
+      storageUsed
     }
   }
-}
+})
 </script>
 <style scoped>
 h1 {

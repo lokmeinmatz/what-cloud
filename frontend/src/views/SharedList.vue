@@ -1,6 +1,6 @@
 <template>
   <div id="shared">
-    <main v-if="$store.getters['auth/isLoggedIn']" class="container-sm">
+    <main v-if="user != null" class="container-sm">
       <h2>Here you can see all your shares</h2>
       <div class="list-group">
         <FSItem
@@ -8,6 +8,7 @@
           class="list-group-item"
           :key="entry.shared"
           :file="entry"
+          @nodeinfo-requested="FileInfo = $event"
         />
       </div>
     </main>
@@ -17,22 +18,21 @@
       <p>It should have some random characters after /shared/...</p>
     </main>
     <aside :class="{display: nodeInfo != null}">
-      <FileInfo class="display" :file="nodeInfo" v-if="nodeInfo != null" @data-updated="updateSharedList" />
+      <FileInfo class="display" v-model="nodeInfo" v-if="nodeInfo != null" @data-updated="updateSharedList" />
     </aside>
   </div>
 </template>
-<script>
-import FSItem from "../components/FSItem";
-import PathDisplay from "../components/PathDisplay";
-import FileInfo from "../components/FileInfo";
-import { updateShared } from "../business/fs";
-import { state } from "../business/globalState";
+<script lang="ts">
+import { defineComponent } from 'vue'
+import FSItem from "../components/FSItem.vue";
+import FileInfo from "../components/FileInfo.vue";
+import { updateShared, Node } from "../business/fs";
+import { store } from '../store';
 
-export default {
+export default defineComponent({
   name: "SharedList",
   components: {
     FSItem,
-    PathDisplay,
     FileInfo,
   },
   async mounted() {
@@ -41,19 +41,15 @@ export default {
   },
   methods: {
     async updateSharedList() {
-      if (!this.$store.getters["auth/isLoggedIn"]) return;
+      if (store.auth.user.value == null) return;
 
-      state.nodeInfoDisplay.subscribeWithId("files", (f) => {
-        if (f != null && f.fetched) this.nodeInfo = f
-        else this.nodeInfo = null
-      });
 
       const url = "/api/shared";
       let res;
       try {
         res = await fetch(url, {
           headers: {
-            Authorization: `Bearer ${this.$store.state.auth.user.auth_token}`,
+            Authorization: `Bearer ${store.auth.user.value?.auth_token}`,
           },
         });
       } catch (e) {
@@ -62,19 +58,18 @@ export default {
       }
 
       if (res.ok) {
-        let sharedEntries = await res.json();
-
-        this.sharedEntries = await updateShared(sharedEntries);
+        this.sharedEntries = await updateShared(await res.json());
       }
     },
   },
   data() {
     return {
-      sharedEntries: [],
+      sharedEntries: [] as Node[],
       nodeInfo: null,
+      user: store.auth.user
     };
   },
-};
+})
 </script>
 <style scoped>
 #shared {
