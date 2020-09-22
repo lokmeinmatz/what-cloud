@@ -12,7 +12,7 @@ export function ByteToFormattedString(byte: number): string {
     if (byte < 2**40) return `${(byte / (2**30)).toFixed(1)} GiB`
     return `${(byte / (2**40)).toFixed(1)} TB`
 }
-
+/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
 export function proxyAwareEqual(a: any, b: any): boolean {
     const aKeys = new Set(Object.keys(a))
     const bKeys = new Set(Object.keys(b))

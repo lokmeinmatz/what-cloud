@@ -185,7 +185,7 @@ export class File extends Node {
 }
 
 
-async function getNodeCacheOrFetch(currNode: Node, pathRemaining: string[], pathFromRoot: string[], parentFolder: Folder | null): Promise<File | Folder> {
+async function getNodeCacheOrFetch(currNode: Node, pathRemaining: string[], pathFromRoot: string[]): Promise<File | Folder> {
 
     if (!currNode.fetched) {
         // fetch from server
@@ -204,7 +204,7 @@ async function getNodeCacheOrFetch(currNode: Node, pathRemaining: string[], path
     }
     //console.log('next', next)
     pathFromRoot.push(next)
-    return getNodeCacheOrFetch(nchild, pathRemaining, pathFromRoot, currNode )
+    return getNodeCacheOrFetch(nchild, pathRemaining, pathFromRoot)
 }
 
 
@@ -232,7 +232,7 @@ export async function getNode(path: string | string[]): Promise<Node> {
     /**
      * @type {Node}
      */
-    const curr = await getNodeCacheOrFetch(store.rootNode.value as Node, path, [], null )
+    const curr = await getNodeCacheOrFetch(store.rootNode.value as Node, path, [])
    
     //console.log('getNode', curr)
     if (!curr.fetched) {
@@ -257,7 +257,7 @@ export async function updateShared(shared: Array<{path: string; share_id: string
 
 export function reset() {
     console.log('set root node unfetched')
-    store.rootNode.value = new Node('', [], false, null)
+    store.rootNode.value = new Folder('', undefined, [], null)
 }
 
 reset()

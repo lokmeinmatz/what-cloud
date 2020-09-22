@@ -15,9 +15,7 @@
       </div>
       <h3 v-else>This folder doesn't exist 😥</h3>
     </main>
-    <aside :class="{display: nodeInfo != null}">
-      <FileInfo class="display" v-if="nodeInfo != null" v-model:file="nodeInfo"/>
-    </aside>
+    <FileInfo v-model:file="nodeInfo"/>
   </div>
 </template>
 <script lang="ts">
@@ -134,20 +132,11 @@ aside {
 
 @media only screen and (max-width: 768px) {
   #files {
-    grid-template-columns: 1fr;
+    grid-template-columns: 100vw auto;
   }
 
-  aside {
-    position: fixed;
-    overflow: hidden;
-    justify-content: center;
-    top: 0;
-    height: 100vh;
-    background-color: rgba(0, 0, 0, 0.1);
-  }
-
-  aside.display {
-    width: 100vw;
+  #files.display-node-info {
+    grid-template-columns: 100vw auto;
   }
 }
 </style>

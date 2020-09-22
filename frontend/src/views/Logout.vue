@@ -21,7 +21,7 @@ export default defineComponent({
   },
   async mounted() {
       console.log('starting logout...')
-      store.rootNode.value = null
+      //store.rootNode.value = null
       fs.reset()
       await delay(100)
       this.progress = 25
