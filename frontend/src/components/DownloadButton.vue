@@ -4,19 +4,18 @@
   </a>
 </template>
 
-<script>
-import { Node, pathArrayToString } from '../business/fs'
 
-export default {
+<script lang="ts">
+import { defineComponent } from 'vue'
+import { Node } from '../business/fs'
+
+export default defineComponent({
   name: 'DownloadButton',
   props: {
     file: {type: Node, required: true}
   },
   methods: {
-    /**
-     * @param {MouseEvent} event
-     */
-    download(event) {
+    download(event: MouseEvent) {
       event.stopPropagation()
       event.preventDefault()
 
@@ -25,7 +24,7 @@ export default {
       window.open()
     }
   },
-}
+})
 </script>
 
 <style scoped>

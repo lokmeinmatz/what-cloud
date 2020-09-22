@@ -1,22 +1,17 @@
-import Vue from 'vue'
-import VueRouter from 'vue-router'
+import { createRouter, createWebHistory, Router, RouteRecordRaw } from 'vue-router'
 import Home from '../views/Home.vue'
 import Files from '../views/Files.vue'
-import store from '../store'
-import { state } from '../business/globalState'
-
+import { store } from '../store'
 import * as Nprogress from 'nprogress'
 
-Vue.use(VueRouter)
-
-const routes = [
+const routes: Array<RouteRecordRaw> = [
   {
     path: '/',
     name: 'Home',
     component: Home
   },
   {
-    path: '/files*',
+    path: '/files/:fpath*',
     name: 'Files',
     // route level code-splitting
     // this generates a separate chunk (about.[hash].js) for this route
@@ -34,7 +29,7 @@ const routes = [
     //component: SharedList
   },
   {
-    path: '/shared*',
+    path: '/shared/:sharedId/:fpath*',
     name: 'Share',
     // route level code-splitting
     // this generates a separate chunk (about.[hash].js) for this route
@@ -58,39 +53,44 @@ const routes = [
   }
 ]
 
-const router = new VueRouter({
-  mode: 'history',
-  base: process.env.BASE_URL,
+const router = createRouter({
+  history: createWebHistory(process.env.BASE_URL),
   routes
 })
 
+import { MyFilesDisplayMode, SharedDisplayMode } from '../store'
+
 router.beforeEach(async (to, from, next) => {
   Nprogress.start()
-  
+  //console.log('to', to, to.params)
   // check if path is /shared or /files
   if (to.path.startsWith('/files')) {
-    state.fileDisplayState.emit({mode: 'files'})
+    store.displayMode.value = new MyFilesDisplayMode()
   } else if (to.path.startsWith('/shared')) {
-    let s = to.path.split('/').filter(s => s.length > 0)
+    const s = to.path.split('/').filter(s => s.length > 0)
     //console.log(s)
     if (s.length >= 2) 
-    state.fileDisplayState.emit({mode: 'shared', shareID: s[1]})
+    
+    store.displayMode.value = new SharedDisplayMode(s[1])
   }
 
   //TODO check if logged in
   if (to.path == '/login' || to.path.startsWith('/shared')) return next()
-  if (store.state.auth.user == null) return next('/login')
+  if (store.auth.user.value == null) {
+    console.warn('no user logged in. redirecting to /login')
+    return next('/login')
+  }
 
 
   const loginState = await fetch('/api/user', {
     headers: {
-      'Authorization': `Bearer ${store.state.auth.user.auth_token}`
+      'Authorization': `Bearer ${store.auth.user.value?.auth_token}`
     }
   })
 
-  if (loginState.status == 200 && store.getters['auth/isLoggedIn']) next()
+  if (loginState.status == 200 && store.auth.user.value != null) next()
   else {
-    store.commit('auth/setUser', null)
+    store.auth.user.value = null
     //console.log('Not logged in, redirecting to login')
     next('/login')
 
@@ -99,6 +99,6 @@ router.beforeEach(async (to, from, next) => {
 
 router.afterEach(() => {
   Nprogress.done()
-})
-
+});
+(window as unknown as {router: Router}).router = router
 export default router

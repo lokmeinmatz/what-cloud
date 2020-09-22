@@ -40,41 +40,36 @@
             </svg>
           </button>
           <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">
-            <router-link class="nav-link dropdown-item" to="/settings">Settings</router-link>
+            <!--<router-link class="nav-link dropdown-item" to="/settings">Settings</router-link>-->
             <div class="dropdown-divider"></div>
             <router-link class="nav-link dropdown-item" to="/logout">Logout</router-link>
           </div>
         </div>
       </div>
     </nav>
-    <router-view />
+    <router-view></router-view>
   </div>
 </template>
-<script>
-import { state } from './business/globalState'
 
-export default {
-  methods: {
-    logout() {
-      console.log('starting logout...')
-      window.rootNode = null
-      state.nodeInfoDisplay.emit(null)
-      this.$store.commit('auth/setUser', null)
-      // TODO send logout to server
-      console.log('logout completed')
-      window.location.href = '/'
-    }
-  }
-}
-</script>
 <style>
-.navbar-brand > span:last-child {
-  font-weight: 100;
+#app {
+  font-family: Avenir, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-align: center;
+  color: #2c3e50;
 }
 
-#app {
-  min-height: 100vh;
-  display: grid;
-  grid-template-rows: min-content 1fr;
+#nav {
+  padding: 30px;
+}
+
+#nav a {
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+#nav a.router-link-exact-active {
+  color: #42b983;
 }
 </style>
