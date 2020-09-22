@@ -13,6 +13,21 @@ export function ByteToFormattedString(byte: number): string {
     return `${(byte / (2**40)).toFixed(1)} TB`
 }
 
+export function proxyAwareEqual(a: any, b: any): boolean {
+    const aKeys = new Set(Object.keys(a))
+    const bKeys = new Set(Object.keys(b))
+    if (aKeys.size != bKeys.size) return false
+
+    for (const e of aKeys) {
+        if (a[e] != b[e]) return false
+        bKeys.delete(e)
+    }
+
+    if (bKeys.size > 0) return false
+
+    return true
+}
+
 export function randString(length: number): string {
     let result           = '';
     const characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';

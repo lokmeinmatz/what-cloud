@@ -33,8 +33,8 @@
         <p>{{elmt.segment}}</p>
       </router-link>
     </div>
-    <DownloadButton v-if="!folder.loading" class="download" :file="folder" />
-    <button class="btn btn-primary" @click.stop="showInfo">Infos</button>
+    <DownloadButton v-if="!folder.loading" id="download" :file="folder" />
+    <button class="btn btn-primary" id="curr-infos" @click.stop="showInfo">Infos</button>
   </div>
 </template>
 
@@ -86,8 +86,12 @@ export default defineComponent({
   gap: 0.5em;
 }
 
-.download {
+#download {
   grid-column: 3 / span 1;
+}
+
+#curr-infos {
+  grid-column: 4 / span 1;
 }
 
 

@@ -1,5 +1,6 @@
 import { store } from '../store'
 import router from '../router'
+import { proxyAwareEqual } from './utils'
 
 export function pathArrayToString(path: string[]): string {
     //console.log(path)
@@ -27,6 +28,80 @@ export class Node {
         this.pathFromRoot = pathFromRoot
         this.fetched = fetched != undefined ? fetched : false
         this.shared = shared
+    }
+
+    async fetch(): Promise<boolean> {
+
+        if (this.fetched) return false
+
+        const url = `/api/node?url_encoded_path=${encodeURIComponent(this.path())}`
+        console.log(`Node ${this.path()} not loaded, fetching via ${url}`)
+        let res
+        try {
+            res = await fetch(url, {
+                headers: {
+                    'Authorization': `Bearer ${store.auth.user.value?.auth_token}`
+                }
+            })
+        }
+        catch (e) {
+            console.error(e)
+            throw e
+        }
+
+        if (res.ok) {
+            //console.log('res ok')
+            const snode = await res.json()
+            console.log('fetched val:', snode)
+            if (this.name != snode.name) {
+                console.error('fetched name != local name')
+                throw 'Wrong Node name'
+            }   
+                         
+            if (!proxyAwareEqual(this.pathFromRoot, snode.pathFromRoot)) {
+                console.error('pathFromRoot differ', this.pathFromRoot, snode.pathFromRoot)
+                throw 'pathFromRoot differ'
+            }
+            if (snode.type == NodeType.Folder) {
+                if (this.type != NodeType.Folder && this.type != NodeType.Node) {
+                    console.error('fetched Folder, but local Node is File')
+                    throw 'Got Folder expected File'
+                }
+                /* eslint-disable @typescript-eslint/no-use-before-define */
+                (this as Folder).children = [
+                    ...snode.childrenFolder.map((f: string) => new Folder(f, undefined, snode.pathFromRoot.concat([f]),  null )),
+                    ...snode.files.map((f: string) => new File(f, snode.pathFromRoot.concat([f]).filter((e: string) => e.length > 0), null ))
+                ]
+                /* eslint-enable @typescript-eslint/no-use-before-define */
+                
+            } else if (snode.type == NodeType.File) {
+                if (this.type != NodeType.File && this.type != NodeType.Node) {
+                    console.error('fetched File, but local Node is Folder')
+                    throw 'Got File expected Folder'
+                }
+            } else {
+                console.error('unknown node type: ', snode.type)
+                throw 'Unknown Node type'
+            }
+
+            this.size = snode.metadata.size
+            this.lastModified = snode.metadata.lastModified
+            this.fetched = true
+            this.shared = snode.metadata.shared
+            
+        }
+        else {
+            console.error('node req failed: ', res.status)
+            if (res.status == 401) {
+                //store.auth.user.value = null
+                router.push('/logout')
+                //alert('You need to log in!')
+            }
+
+            throw res.statusText
+        }
+
+        return true
     }
 
     path(): string {
@@ -114,72 +189,9 @@ async function getNodeCacheOrFetch(currNode: Node, pathRemaining: string[], path
 
     if (!currNode.fetched) {
         // fetch from server
-        const url = `/api/node?url_encoded_path=${encodeURIComponent(pathArrayToString(pathFromRoot))}`
-        console.log(`Node ${pathArrayToString(pathFromRoot)} not loaded, fetching via ${url}`)
-        let res
-        try {
-            res = await fetch(url, {
-                headers: {
-                    'Authorization': `Bearer ${store.auth.user.value?.auth_token}`
-                }
-            })
-        }
-        catch (e) {
-            console.error(e)
-            throw e
-        }
-
-        if (res.ok) {
-            //console.log('res ok')
-            const snode = await res.json()
-            console.log('fetched val:', snode)
-            if (snode.type == NodeType.Folder) {
-                currNode = new Folder(
-                    snode.name, 
-                    [
-                        ...snode.childrenFolder.map((f: string) => new Folder(f, undefined, snode.pathFromRoot.concat([f]),  null )),
-                        ...snode.files.map((f: string) => new File(f, snode.pathFromRoot.concat([f]).filter((e: string) => e.length > 0), null ))
-                    ], 
-                    snode.pathFromRoot,
-                    null)
-                } else if (snode.type == NodeType.File) {
-                    
-                    currNode = new File(
-                        snode.name,
-                        snode.pathFromRoot,
-                        null)
-            } else {
-                console.error('unknown node type: ', snode.type)
-                throw null
-            }
-
-            currNode.size = snode.metadata.size
-            currNode.lastModified = snode.metadata.lastModified
-            currNode.fetched = true
-            currNode.shared = snode.metadata.shared
-
-            if (currNode.pathFromRoot.length == 0) {
-                store.rootNode.value = currNode
-            } else if (parentFolder != null) {
-                // update node this is the child of
-                parentFolder.children = parentFolder.children?.filter(f => {
-                    // folders and files cannot have the same name
-                    return !(f.name == currNode.name)
-                })
-                if (parentFolder.children == undefined) parentFolder.children = []
-                parentFolder.children.push(currNode)
-            }
-        }
-        else {
-            console.error('node req failed: ', res.status)
-            if (res.status == 401) {
-                store.auth.user.value = null
-                router.push('/login')
-                alert('You need to log in!')
-            }
-
-            throw res.statusText
-        }
+        await currNode.fetch()
+        if (currNode.pathFromRoot.length == 0)
+        store.rootNode.value = currNode
     }
     if (pathRemaining.length == 0) return currNode
     const next = pathRemaining.splice(0, 1)[0]
@@ -222,7 +234,7 @@ export async function getNode(path: string | string[]): Promise<Node> {
      */
     const curr = await getNodeCacheOrFetch(store.rootNode.value as Node, path, [], null )
    
-    console.log('getNode', curr)
+    //console.log('getNode', curr)
     if (!curr.fetched) {
         console.error('node isnt fetched, something went wrong')
         throw null

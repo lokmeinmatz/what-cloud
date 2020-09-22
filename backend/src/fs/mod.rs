@@ -100,8 +100,6 @@ pub fn get_node_shared(url_encoded_path: &RawStr, db: State<SharedDatabase>, sha
 pub fn get_node_data(url_encoded_path: &RawStr, user_id: UserID, db: State<SharedDatabase>) -> NodeContentResponse {
  
     
-    
-
     let folder_path = match url_encoded_to_rel_path(url_encoded_path) {
         Ok(p) => p,
         Err(e) => return NodeContentResponse::WrongDecoding(e.into())

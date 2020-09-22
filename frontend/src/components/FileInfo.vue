@@ -11,7 +11,7 @@
     </div>
     <div class="card-body" style="postion:absolute;">
       <div class="card-title">
-        <img :src="`/api/static/icons/${file.type == 'folder' ? 'folder' : file.ext()}.svg`" />
+        <img :src="`/api/static/icons/${file.type == 'file' ? file.ext() : 'folder'}.svg`" />
         <h4 style="text-wrap: break-word; width: 100%">{{file.name}}</h4>
       </div>
       <table class="table" style="position: relative;">
@@ -32,14 +32,28 @@
           <tr>
             <td>Share</td>
             <td>
-              <input class="form-check-input" type="checkbox" file id="share-this" v-model="sharedToggle"/>
+              <input
+                class="form-check-input"
+                type="checkbox"
+                file
+                id="share-this"
+                v-model="sharedToggle"
+              />
               <label class="form-check-label" for="share-this">Share this folder</label>
             </td>
           </tr>
           <tr v-if="file.shared">
             <td>Shared-URL</td>
             <td>
-              <input @click="copyShared" readonly type="text" ref="sharedLink" :value="file.sharedLink()" data-toggle="tooltip" title="Click to copy"/>
+              <input
+                @click="copyShared"
+                readonly
+                type="text"
+                ref="sharedLink"
+                :value="file.sharedLink()"
+                data-toggle="tooltip"
+                title="Click to copy"
+              />
             </td>
           </tr>
         </tbody>
@@ -50,50 +64,70 @@
 
 
 <script lang="ts">
-import { defineComponent } from 'vue'
+import { computed, defineComponent, ref, PropType, watch } from "vue";
 import { Node } from "../business/fs";
 import { ByteToFormattedString } from "../business/utils";
 
 export default defineComponent({
   name: "FileInfo",
-  data() {
-    return {
-      fetchingMeta: false,
-    };
-  },
   props: {
-    file: {type: Node},
+    file: { type: Object as PropType<Node> },
   },
-  methods: {
-    close() {
-      this.$emit('update:file', null)
-    },
-    copyShared() {
-      console.log(this.$refs.sharedLink);
-      (this.$refs.sharedLink as HTMLInputElement).select()
-      document.execCommand('copy')
-      console.log('copied shared path')
+  setup(props, { emit }) {
+    const fetchingMeta = ref(false)
+    async function fetchFileMeta() {
+      if (props.file != undefined) {
+        if (!props.file.fetched) {
+          console.log('uncached, get data')
+          fetchingMeta.value = true
+          await props.file.fetch()
+          fetchingMeta.value = false
+        }
+      }
     }
-  },
-  computed: {
-    fileSize(): string {
-      const v = this.file as Node
+    console.log('added watcher')
+    watch(props, fetchFileMeta)
+    
+    fetchFileMeta()
+
+    function close() {
+      emit("update:file", null);
+    }
+
+    const fileSize = computed<string>(() => {
+      const v = props.file as Node;
       return (
         (v.type == "folder" ? "≥" : "") +
         (v.fetched ? ByteToFormattedString(v.size) : "unknown")
       );
-    },
+    });
 
-    sharedToggle: {
-      get(): boolean { return (this.file as Node).shared != null },
+    const sharedToggle = computed({
+      get(): boolean {
+        return (props.file as Node).shared != null;
+      },
       set(v: boolean) {
-        console.log('Setting share of curr node:', v);
-        (this.file as Node).setShared(v)
-        this.$emit('data-updated')
-      }
-    }
+        console.log("Setting share of curr node:", v);
+        (props.file as Node).setShared(v);
+        emit("data-updated");
+      },
+    });
+
+    return {
+      fetchingMeta,
+      close,
+      fileSize,
+      sharedToggle,
+    };
   },
-})
+  methods: {
+    copyShared() {
+      (this.$refs.sharedLink as HTMLInputElement).select();
+      document.execCommand("copy");
+      console.log("copied shared path");
+    },
+  },
+});
 </script>
 
 <style scoped>
