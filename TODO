@@ -2,6 +2,7 @@
 Backend:
   ✔ Folder download @done(20-09-07 17:13)
   ☐ Cache data based on hash of file name and last modified date?
+  ☐ On shared /api/node requests, set pathFromRoot so it starts at the shared folder base, not user base! @started(20-09-24 14:11)
 Frontend:
   ✔ add Share option @done(20-09-09 17:53)
   ☐ show used storage space if calculated

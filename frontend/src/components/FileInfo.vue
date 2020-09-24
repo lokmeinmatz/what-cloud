@@ -61,6 +61,14 @@
                     title="Click to copy"
                   />
                 </td>
+                <div class="toast-container">
+                  <!-- copied toast -->
+                  <div class="toast bg-success" ref="copiedToast" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="toast-header">
+                      <strong>Copied Shared URL to clipboard</strong>
+                    </div>
+                  </div>
+                </div>
               </tr>
             </tbody>
           </table>
@@ -83,6 +91,21 @@ export default defineComponent({
   },
   setup(props, { emit }) {
     const fetchingMeta = ref(false);
+    const copiedToast = ref<HTMLDivElement | null>(null)
+    const sharedLink = ref<HTMLInputElement | null>(null)
+
+    function copyShared() {
+      if(sharedLink.value == null) return
+      sharedLink.value.select();
+      document.execCommand("copy");
+      console.log("copied shared path");
+      /* eslint-disable @typescript-eslint/no-explicit-any */
+      (window as any).$(copiedToast.value).toast({delay: 2000});
+      (window as any).$(copiedToast.value).toast('show');
+      /* eslint-enable @typescript-eslint/no-explicit-any */
+    }
+
+
     async function fetchFileMeta() {
       if (props.file != undefined) {
         if (!props.file.fetched) {
@@ -125,16 +148,12 @@ export default defineComponent({
       fetchingMeta,
       close,
       fileSize,
-      sharedToggle
+      sharedToggle,
+      copiedToast,
+      sharedLink,
+      copyShared
     };
-  },
-  methods: {
-    copyShared() {
-      (this.$refs.sharedLink as HTMLInputElement).select();
-      document.execCommand("copy");
-      console.log("copied shared path");
-    },
-  },
+  }
 });
 </script>
 
@@ -148,7 +167,7 @@ export default defineComponent({
   display: grid;
   grid-template-columns: 3em minmax(0, 1fr);
   width: 100%;
-  align-items: center;
+  justify-content: center;
 }
 
 .card-title * {
@@ -157,6 +176,24 @@ export default defineComponent({
 
 .card-title img {
   width: 2em;
+}
+
+.toast-container {
+  position: fixed;
+  bottom: 1em;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toast {
+  width: min-content;
+}
+
+.toast-header {
+  justify-content: center;
 }
 
 #meta-loader {
@@ -181,14 +218,17 @@ export default defineComponent({
     background-color: rgba(0, 0, 0, 0.1);
   }
 
-  .flyin-enter-active, .flyin-leave-active {
+  .flyin-enter-active,
+  .flyin-leave-active {
     transition: transform 0.2s ease-out;
   }
-  
-  .flyin-enter-from, .flyin-leave-to {
+
+  .flyin-enter-from,
+  .flyin-leave-to {
     transform: translateX(100vw);
   }
-  .flyin-enter-to, .flyin-leave-from {
+  .flyin-enter-to,
+  .flyin-leave-from {
     transform: translateX(0vw);
   }
 }

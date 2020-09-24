@@ -1,5 +1,5 @@
 <template>
-  <main class="container-md">
+  <main class="container">
     <div class="card">
       <div class="card-img-top">
       </div>

@@ -6,23 +6,28 @@ export interface User {
     name: string;
 }
 
+export enum DisplayModeType {
+    Files = 'files',
+    Shared = 'shared'
+} 
+
 export class DisplayMode {
-    mode: string
-    constructor(mode: string) {
+    mode: DisplayModeType
+    sharedId?: string
+    constructor(mode: DisplayModeType, shareID?: string) {
         this.mode = mode
+        this.sharedId = shareID
     }
 }
 export class MyFilesDisplayMode extends DisplayMode {
     constructor() {
-        super('files')
+        super(DisplayModeType.Files)
     }
 }
 
 export class SharedDisplayMode extends DisplayMode {
-    sharedId: string
     constructor(sharedId: string) {
-        super('shared')
-        this.sharedId = sharedId
+        super(DisplayModeType.Shared, sharedId)
     }
 }
 

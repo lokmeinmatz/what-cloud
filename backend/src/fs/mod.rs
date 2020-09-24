@@ -68,15 +68,14 @@ pub fn url_encoded_to_rel_path(rs: &RawStr) -> Result<PathBuf, &'static str> {
         // TODO are there other symbolic links or ways to escape the dir?
         return Err(".. not allowed in path");
     };
-
     if raw_path.starts_with('/') { raw_path.remove(0); }
-
+    
     Ok(PathBuf::from(raw_path))
 }
 
 
-#[get("/node?<url_encoded_path>&<shared_id>")]
-pub fn get_node_shared(url_encoded_path: &RawStr, db: State<SharedDatabase>, shared_id: String) -> NodeContentResponse {
+#[get("/node?<url_encoded_path>&<shared_id>", rank = 1)]
+pub fn get_node_data_shared(url_encoded_path: &RawStr, db: State<SharedDatabase>, shared_id: String) -> NodeContentResponse {
     
     // check if shared id is allowed
     if let Some(se) = db.get_shared_entry(&shared_id) {
@@ -86,9 +85,10 @@ pub fn get_node_shared(url_encoded_path: &RawStr, db: State<SharedDatabase>, sha
             Err(e) => return NodeContentResponse::WrongDecoding(e.into())
         };
 
+        // TODO why join???
         let share_path = dbg!(se.path.join(folder_path));
 
-        get_node(&share_path, se.user)
+        get_node(&share_path, se.user, db)
     }
     else {
         NodeContentResponse::PathNotFound("Shared ID doesn't exist".into())
@@ -96,7 +96,7 @@ pub fn get_node_shared(url_encoded_path: &RawStr, db: State<SharedDatabase>, sha
 }
 
 
-#[get("/node?<url_encoded_path>")]
+#[get("/node?<url_encoded_path>", rank = 2)]
 pub fn get_node_data(url_encoded_path: &RawStr, user_id: UserID, db: State<SharedDatabase>) -> NodeContentResponse {
  
     
@@ -105,7 +105,11 @@ pub fn get_node_data(url_encoded_path: &RawStr, user_id: UserID, db: State<Share
         Err(e) => return NodeContentResponse::WrongDecoding(e.into())
     };
     
-    
+    get_node(&folder_path, user_id, db)    
+}
+
+fn get_node(folder_path: &Path, user_id: UserID, db: State<SharedDatabase>) -> NodeContentResponse {
+
     let combined = to_abs_data_path(&user_id,&folder_path);
     let mut root: PathBuf = PathBuf::from(crate::config::data_path());
     root.push(&user_id.0);
@@ -125,18 +129,17 @@ pub fn get_node_data(url_encoded_path: &RawStr, user_id: UserID, db: State<Share
     let mut children_folder: Option<Vec<String>> = None;
     let mut files: Option<Vec<String>> = None;
 
-    info!("get_node_data on path {:?}", combined);
+    info!("get_node on path {:?}", combined);
     let is_dir = combined.is_dir();
+
     if is_dir {
         match combined.read_dir() {
             Err(e) => {
                 return NodeContentResponse::DirError(e.to_string())
             },
             Ok(dir) => {
-                children_folder = Some(Vec::new());
-                files = Some(Vec::new());
-                let cf = children_folder.as_mut().unwrap();
-                let f = files.as_mut().unwrap();
+                let mut cf = Vec::new();
+                let mut f = Vec::new();
                 for maybe_entry in dir {
                     if let Ok(e) = maybe_entry {
                         if let Ok(ft) = e.file_type() {
@@ -150,16 +153,9 @@ pub fn get_node_data(url_encoded_path: &RawStr, user_id: UserID, db: State<Share
                         }
                     }
                 } 
+                children_folder = Some(cf);
+                files = Some(f);
             }
-        }
-    }
-
-    let name = combined.file_name().unwrap().to_string_lossy().into_owned();
-    let mut path_from_root = Vec::new();
-
-    for seg in url_encoded_path.split("%2F") {
-        if !seg.is_empty() {
-            path_from_root.push(seg.into());
         }
     }
 
@@ -169,17 +165,13 @@ pub fn get_node_data(url_encoded_path: &RawStr, user_id: UserID, db: State<Share
     };
 
     NodeContentResponse::NodeData(Json(NetNode {
-        name: if path_from_root.len() == 0 { "".into() } else { name },
+        name: folder_path.file_name().map(std::ffi::OsStr::to_string_lossy).unwrap_or(std::borrow::Cow::Borrowed("")).to_string(),
         children_folder,
         files,
-        path_from_root,
+        path_from_root: folder_path.components().map(|oss| oss.as_os_str().to_string_lossy().to_string()).collect(),
         metadata ,
         node_type: if is_dir { "folder" } else { "file" }
     }))
-}
-
-fn get_node(folder_path: &Path, user_id: UserID) -> NodeContentResponse {
-    unimplemented!()
 }
 
 

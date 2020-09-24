@@ -1,4 +1,4 @@
-import { store } from '../store'
+import { DisplayModeType, store } from '../store'
 import router from '../router'
 import { proxyAwareEqual } from './utils'
 
@@ -33,8 +33,10 @@ export class Node {
     async fetch(): Promise<boolean> {
 
         if (this.fetched) return false
-
-        const url = `/api/node?url_encoded_path=${encodeURIComponent(this.path())}`
+        let url: string
+        if (store.displayMode.value?.mode == DisplayModeType.Files)  url = `/api/node?url_encoded_path=${encodeURIComponent(this.path())}`
+        else if (store.displayMode.value?.sharedId != undefined) url = `/api/node?url_encoded_path=${encodeURIComponent(this.path())}&shared_id=${store.displayMode.value?.sharedId}`
+        else throw new Error('neither owned node or shared with id in storage.displayMode')
         console.log(`Node ${this.path()} not loaded, fetching via ${url}`)
         let res
         try {
@@ -53,10 +55,14 @@ export class Node {
             //console.log('res ok')
             const snode = await res.json()
             console.log('fetched val:', snode)
-            if (this.name != snode.name) {
+            if (this.pathFromRoot.length > 0 && this.name != snode.name) {
                 console.error('fetched name != local name')
-                throw 'Wrong Node name'
-            }   
+                throw 'Wrong Node name' 
+            } else if (this.pathFromRoot.length == 0) {
+                console.log('updated root name to ', snode.name)
+                this.name = snode.name
+                
+            }
                          
             if (!proxyAwareEqual(this.pathFromRoot, snode.pathFromRoot)) {
                 console.error('pathFromRoot differ', this.pathFromRoot, snode.pathFromRoot)

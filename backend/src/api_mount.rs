@@ -4,6 +4,7 @@ pub fn mount_api() -> Vec<Route> {
     routes![
         crate::auth::login, 
         crate::auth::logout, 
+        crate::fs::get_node_data_shared,
         crate::fs::get_node_data,
         crate::fs::download_file,
         crate::fs::shared::update_folder_share,

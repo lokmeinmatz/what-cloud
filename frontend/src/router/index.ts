@@ -75,7 +75,7 @@ router.beforeEach(async (to, from, next) => {
   }
 
   //TODO check if logged in
-  if (to.path == '/login' || to.path.startsWith('/shared')) return next()
+  if (to.path == '/login' || to.path == '/logout' || to.path.startsWith('/shared')) return next()
   if (store.auth.user.value == null) {
     console.warn('no user logged in. redirecting to /login')
     return next('/login')
