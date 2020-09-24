@@ -11,3 +11,6 @@ Software used in this project:
 - Own written Rust zip-stream library
 - Vue3 and Typescript
 - Sqlite
+
+For API documentation see backend/readme.md
+**NOTE** The API is changing constantly so the readme is not allways up-to-date 
