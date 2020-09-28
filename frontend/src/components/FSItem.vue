@@ -6,7 +6,7 @@
       height="24"
       style="margin-right: 0.5em;"
     />
-    <router-link v-if="file.type == 'folder'" class="f-name" :to="'/files' + file.path()">{{file.name}}</router-link>
+    <router-link v-if="file.type == 'folder'" class="f-name" :to="displayMode.baseUrl() + file.path()">{{file.name}}</router-link>
     <a v-else class="f-name" :href="file.downloadLink()">{{file.name}}</a>
     <DownloadButton :file="file" />
     <button class="btn btn-primary" @click.stop="showInfo($event, file)">Infos</button>
@@ -18,6 +18,7 @@
 import { defineComponent } from 'vue'
 import { Node } from "../business/fs";
 import DownloadButton from "./DownloadButton.vue";
+import { store } from '../store'
 
 export default defineComponent({
   name: "FSItem",
@@ -26,6 +27,11 @@ export default defineComponent({
   },
   props: {
     file: Node,
+  },
+  data() {
+    return {
+      displayMode: store.displayMode
+    }
   },
   methods: {
     showInfo(event: MouseEvent, file: Node) {

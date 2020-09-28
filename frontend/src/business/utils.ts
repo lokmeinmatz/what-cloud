@@ -43,3 +43,9 @@ export function randString(length: number): string {
         setTimeout(() => res(), ms)
     })
 } 
+
+
+export function debugWindowProp(name: string, data: any) {
+    console.log(`updated debug window property '${name}'`);
+    (window as any)[name] = data
+}

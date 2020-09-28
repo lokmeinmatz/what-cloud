@@ -24,8 +24,8 @@ import { computed, defineComponent, ref, watch } from 'vue'
 import FileList from '../components/FileList.vue'
 import PathDisplay from '../components/PathDisplay.vue'
 import FileInfo from '../components/FileInfo.vue'
-import { store, MyFilesDisplayMode, SharedDisplayMode } from '../store'
-import { getNode, Node } from '../business/fs'
+import { DisplayModeType, store } from '../store'
+import { getNode, GetNodeError, Node } from '../business/fs'
 import router from '../router'
 
 
@@ -38,17 +38,17 @@ export default defineComponent({
     FileInfo
   },
   setup() {
-    const folder = ref<string |Node>('loading')
+    const folder = ref<'loading' |Node | null>('loading')
     const nodeInfo = ref<Node | null>(null)
     const mode = store.displayMode
 
     const pathElements = computed<string[]>(() => {
       let r
-      const mode = store.displayMode.value
-      if (mode instanceof MyFilesDisplayMode) {
+      const mode = store.displayMode.value.mode
+      if (mode == DisplayModeType.Files) {
         r = router.currentRoute.value.path.split('/').filter(e => e.trim().length > 0)
       } else 
-      if (mode instanceof SharedDisplayMode) {
+      if (mode == DisplayModeType.Shared) {
         r = router.currentRoute.value.path.split('/').filter(e => e.trim().length > 0)
         r.shift() 
       } else { return [] }
@@ -69,12 +69,19 @@ export default defineComponent({
       try {
         
         folder.value = 'loading'
-        folder.value = await getNode(pathElements.value)
-        //console.log('successfully got new folder', this.folder)
+        const n = await getNode(pathElements.value)
+        if (n.isOk()) {
+          folder.value = n.value
+        } else if (n.error == GetNodeError.NodeNotExisiting) {
+          // TODO go back to start page?
+          folder.value = null
+        } else {
+          folder.value = null
+        }
         return
       }
       catch (e) {
-        console.error('updateFolder() failed', e)
+        console.error('updateFolder() failed:', e)
         // TODO handle error better
         folder.value = 'loading'
         //this.folder = null

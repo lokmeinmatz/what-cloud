@@ -1,7 +1,7 @@
 <template>
   <div class="path-display">
     <div class="btn-group" role="group" aria-label="File path">
-      <router-link class="btn" to="/files">
+      <router-link class="btn" :to="mode.baseUrl()">
         <svg
           v-if="mode.mode == 'files'"
           fill="none"
@@ -27,13 +27,13 @@
         class="btn sub-folder"
         v-for="elmt in path"
         :key="elmt.filePath"
-        :to="`/files${elmt.filePath}`"
+        :to="`${mode.baseUrl()}${elmt.filePath}`"
       >
         <img src="/api/static/icons/folder.svg" width="24" height="24" />
         <p>{{elmt.segment}}</p>
       </router-link>
     </div>
-    <DownloadButton v-if="!folder.loading" id="download" :file="folder" />
+    <DownloadButton v-if="folder != null && !folder.loading" id="download" :file="folder" />
     <button class="btn btn-primary" id="curr-infos" @click.stop="showInfo">Infos</button>
   </div>
 </template>
@@ -63,7 +63,8 @@ export default defineComponent({
     // TODO duplicate code
     path(): Array<{segment: string; filePath: string}> {
 
-      const res = []
+      const res: Array<{segment: string; filePath: string}> = []
+      if (this.folder == null) return res 
       let prevPath = ''
       for (const seg of (this.folder as Folder).pathFromRoot) {
         const npath = `${prevPath}/${seg}`

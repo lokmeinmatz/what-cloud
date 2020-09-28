@@ -55,7 +55,6 @@ fn to_abs_data_path<P: AsRef<Path>>(user: &UserID, p: P) -> PathBuf {
 
 use rocket::State;
 use super::database::SharedDatabase;
-use shared::SharedID;
 
 pub fn url_encoded_to_rel_path(rs: &RawStr) -> Result<PathBuf, &'static str> {
     let mut raw_path: String = match rs.percent_decode() {
@@ -88,7 +87,7 @@ pub fn get_node_data_shared(url_encoded_path: &RawStr, db: State<SharedDatabase>
         // TODO why join???
         let share_path = dbg!(se.path.join(folder_path));
 
-        get_node(&share_path, se.user, db)
+        get_node(&share_path, se.user, db, Some(&se.path))
     }
     else {
         NodeContentResponse::PathNotFound("Shared ID doesn't exist".into())
@@ -105,10 +104,10 @@ pub fn get_node_data(url_encoded_path: &RawStr, user_id: UserID, db: State<Share
         Err(e) => return NodeContentResponse::WrongDecoding(e.into())
     };
     
-    get_node(&folder_path, user_id, db)    
+    get_node(&folder_path, user_id, db, None)    
 }
 
-fn get_node(folder_path: &Path, user_id: UserID, db: State<SharedDatabase>) -> NodeContentResponse {
+fn get_node(folder_path: &Path, user_id: UserID, db: State<SharedDatabase>, base_path: Option<&Path>) -> NodeContentResponse {
 
     let combined = to_abs_data_path(&user_id,&folder_path);
     let mut root: PathBuf = PathBuf::from(crate::config::data_path());
@@ -131,6 +130,29 @@ fn get_node(folder_path: &Path, user_id: UserID, db: State<SharedDatabase>) -> N
 
     info!("get_node on path {:?}", combined);
     let is_dir = combined.is_dir();
+
+
+    // collects either all components to an Vec<String> or skips the ones that are in the base_path for shared nodes
+    let path_from_root = match base_path {
+        None => folder_path.components(),
+        Some(bp) => {
+            let mut fpc = folder_path.components();
+
+            for comp in bp.components() {
+                let n_fp = fpc.next();
+                if let Some(n_fp) = n_fp {
+                    if n_fp.as_os_str() != comp.as_os_str() {
+                        eprintln!("folder_path didn't contain base_path");
+                        return NodeContentResponse::DirError("Wrong base_path".into());
+                    }
+                } else {
+                    eprintln!("folder_path was shorter than base_path?!");
+                    return NodeContentResponse::PathNotFound("Wrong base_path".into());
+                }
+            }
+            fpc
+        }
+    }.map(|oss| oss.as_os_str().to_string_lossy().to_string()).collect();
 
     if is_dir {
         match combined.read_dir() {
@@ -168,7 +190,7 @@ fn get_node(folder_path: &Path, user_id: UserID, db: State<SharedDatabase>) -> N
         name: folder_path.file_name().map(std::ffi::OsStr::to_string_lossy).unwrap_or(std::borrow::Cow::Borrowed("")).to_string(),
         children_folder,
         files,
-        path_from_root: folder_path.components().map(|oss| oss.as_os_str().to_string_lossy().to_string()).collect(),
+        path_from_root,
         metadata ,
         node_type: if is_dir { "folder" } else { "file" }
     }))

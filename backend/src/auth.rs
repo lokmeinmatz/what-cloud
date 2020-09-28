@@ -7,7 +7,6 @@ use log::{info};
 use crate::database::SharedDatabase;
 use crate::token_validizer::token_storage;
 use rocket::request::{FromRequest, Outcome};
-use serde::Serialize;
 use serde_json::json;
 
 #[derive(Deserialize)]

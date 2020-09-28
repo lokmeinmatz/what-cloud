@@ -18,16 +18,9 @@ export class DisplayMode {
         this.mode = mode
         this.sharedId = shareID
     }
-}
-export class MyFilesDisplayMode extends DisplayMode {
-    constructor() {
-        super(DisplayModeType.Files)
-    }
-}
 
-export class SharedDisplayMode extends DisplayMode {
-    constructor(sharedId: string) {
-        super(DisplayModeType.Shared, sharedId)
+    baseUrl(): string {
+        return this.mode == DisplayModeType.Files ? '/files' : `/shared/${this.sharedId}`
     }
 }
 
@@ -63,7 +56,7 @@ export const store =  {
             }
         }
     },
-    displayMode: ref<DisplayMode>(new MyFilesDisplayMode()),
+    displayMode: ref<DisplayMode>(new DisplayMode(DisplayModeType.Files)),
     rootNode: ref<Node | null>(null),
     baseUrl: location.protocol + '//' +location.host
 } as const
