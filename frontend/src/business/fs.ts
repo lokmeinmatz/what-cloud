@@ -2,6 +2,7 @@ import { DisplayModeType, store } from '../store'
 import router from '../router'
 import { debugWindowProp, proxyAwareEqual } from './utils'
 import { err, ok, Result } from 'neverthrow'
+import { NetNode } from './nettypes'
 
 export function pathArrayToString(path: string[]): string {
     //console.log(path)
@@ -27,27 +28,29 @@ export class Node {
     type = NodeType.Node
     size = -1
     lastModified = ''
+    ownedBy: string
 
-    constructor(name: string, pathFromRoot: string[], fetched: boolean, shared: string | null) {
+    constructor(name: string, pathFromRoot: string[], fetched: boolean, shared: string | null, ownedBy: string) {
         this.name = name
         this.pathFromRoot = pathFromRoot
         this.fetched = fetched != undefined ? fetched : false
         this.shared = shared
+        this.ownedBy = ownedBy
     }
 
     async fetch(): Promise<Result<boolean, string>> {
 
         if (this.fetched) return ok(false)
         let url: string
-        if (store.displayMode.value?.mode == DisplayModeType.Files) url = `/api/node?url_encoded_path=${encodeURIComponent(this.path())}`
-        else if (store.displayMode.value?.sharedId != undefined) url = `/api/node?url_encoded_path=${encodeURIComponent(this.path())}&shared_id=${store.displayMode.value?.sharedId}`
+        if (store.displayMode.value?.mode == DisplayModeType.Files) url = `/api/node?file_path=${encodeURIComponent(this.path())}`
+        else if (store.displayMode.value?.sharedId != undefined) url = `/api/node?file_path=${encodeURIComponent(this.path())}&shared_id=${store.displayMode.value?.sharedId}`
         else return err('neither owned node or shared with id in storage.displayMode')
         console.log(`Node ${this.path()} not loaded, fetching via ${url}`)
         let res
         try {
             res = await fetch(url, {
                 headers: {
-                    'Authorization': `Bearer ${store.auth.user.value?.auth_token}`
+                    'Authorization': `Bearer ${store.auth.user.value?.authToken}`
                 }
             })
         }
@@ -58,7 +61,7 @@ export class Node {
 
         if (res.ok) {
             //console.log('res ok')
-            const snode = await res.json()
+            const snode: NetNode = await res.json()
             console.log('fetched val:', snode)
             if (this.pathFromRoot.length > 0 && this.name != snode.name) {
                 console.error('fetched name != local name')
@@ -73,32 +76,34 @@ export class Node {
                 console.error('pathFromRoot differ', this.pathFromRoot, snode.pathFromRoot)
                 return err('pathFromRoot differ')
             }
-            if (snode.type == NodeType.Folder) {
+            if (snode.metadata.type == NodeType.Folder && snode.childrenFolder != undefined && snode.files != undefined) {
                 if (this.type != NodeType.Folder && this.type != NodeType.Node) {
                     console.error('fetched Folder, but local Node is File')
                     return err('Got Folder expected File')
                 }
                 /* eslint-disable @typescript-eslint/no-use-before-define */
                 (this as Folder).children = [
-                    ...snode.childrenFolder.map((f: string) => new Folder(f, undefined, snode.pathFromRoot.concat([f]), null)),
-                    ...snode.files.map((f: string) => new File(f, snode.pathFromRoot.concat([f]).filter((e: string) => e.length > 0), null))
+                    ...snode.childrenFolder.map((f: string) => new Folder(f, undefined, snode.pathFromRoot.concat([f]), null, snode.ownedBy)),
+                    ...snode.files.map((f: string) => new File(f, snode.pathFromRoot.concat([f]).filter((e: string) => e.length > 0), null, snode.ownedBy))
                 ]
                 /* eslint-enable @typescript-eslint/no-use-before-define */
 
-            } else if (snode.type == NodeType.File) {
+            } else if (snode.metadata.type == NodeType.File) {
                 if (this.type != NodeType.File && this.type != NodeType.Node) {
                     console.error('fetched File, but local Node is Folder')
                     return err('Got File expected Folder')
                 }
             } else {
-                console.error('unknown node type: ', snode.type)
+                console.error('unknown node type: ', snode)
                 return err('Unknown Node type')
             }
 
             this.size = snode.metadata.size
             this.lastModified = snode.metadata.lastModified
             this.fetched = true
-            this.shared = snode.metadata.shared
+            // cast undefined to null, is there a more elegant way???
+            this.shared = snode.metadata.shared == undefined ? null : snode.metadata.shared
+            this.ownedBy = snode.ownedBy
 
         }
         else {
@@ -125,7 +130,7 @@ export class Node {
     }
 
     downloadLink(): string {
-        return `/api/download/file?path=${encodeURIComponent(this.path())}&token=${store.auth.user.value?.auth_token}`
+        return `/api/download/file?path=${encodeURIComponent(this.path())}&token=${store.auth.user.value?.authToken}`
     }
 
     async setShared(enabled: boolean) {
@@ -135,7 +140,7 @@ export class Node {
         const res = await fetch(url, {
             method: 'PATCH',
             headers: {
-                'Authorization': `Bearer ${store.auth.user.value?.auth_token}`
+                'Authorization': `Bearer ${store.auth.user.value?.authToken}`
             }
         })
         if (res.status != 200) {
@@ -157,8 +162,8 @@ export class Folder extends Node {
 
     children?: Node[]
 
-    constructor(name: string, children: Node[] | undefined, pathFromRoot: string[], shared: string | null) {
-        super(name, pathFromRoot, children != null, shared)
+    constructor(name: string, children: Node[] | undefined, pathFromRoot: string[], shared: string | null, ownedBy: string) {
+        super(name, pathFromRoot, children != null, shared, ownedBy)
 
         this.type = NodeType.Folder
 
@@ -174,8 +179,8 @@ export class File extends Node {
      * @param {string[]} obj.pathFromRoot
      * @param {string | null} obj.shared
      */
-    constructor(name: string, pathFromRoot: string[], shared: string | null) {
-        super(name, pathFromRoot, false, shared)
+    constructor(name: string, pathFromRoot: string[], shared: string | null, ownedBy: string) {
+        super(name, pathFromRoot, false, shared, ownedBy)
 
         this.type = NodeType.File
 
@@ -267,7 +272,7 @@ export async function updateShared(shared: Array<{ path: string; share_id: strin
 
 export function reset() {
     console.log('set root node unfetched')
-    store.rootNode.value = new Folder('', undefined, [], null)
+    store.rootNode.value = new Folder('', undefined, [], null, store.auth.user.value?.userId || "unknown")
 }
 
 reset()

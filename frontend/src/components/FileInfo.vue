@@ -35,7 +35,7 @@
                 <td>Modified</td>
                 <td>{{ file.lastModified }}</td>
               </tr>
-              <tr>
+              <tr v-if="nodeIsOwned">
                 <td>Share</td>
                 <td>
                   <input
@@ -47,6 +47,10 @@
                   />
                   <label class="form-check-label" for="share-this">Share this folder</label>
                 </td>
+              </tr>
+              <tr v-else>
+                <td>Shared by</td>
+                <td>{{file.ownedBy}}</td>
               </tr>
               <tr v-if="file.shared">
                 <td>Shared-URL</td>
@@ -83,7 +87,7 @@
 import { computed, defineComponent, ref, PropType, watch } from "vue";
 import { Node } from "../business/fs";
 import { ByteToFormattedString } from "../business/utils";
-
+import { store } from '../store'
 export default defineComponent({
   name: "FileInfo",
   props: {
@@ -133,6 +137,10 @@ export default defineComponent({
       );
     });
 
+    const nodeIsOwned = computed<boolean>(() => {
+      return props.file?.ownedBy == store.auth.user.value?.userId
+    })
+
     const sharedToggle = computed({
       get(): boolean {
         return (props.file as Node).shared != null;
@@ -151,7 +159,8 @@ export default defineComponent({
       sharedToggle,
       copiedToast,
       sharedLink,
-      copyShared
+      copyShared,
+      nodeIsOwned
     };
   }
 });

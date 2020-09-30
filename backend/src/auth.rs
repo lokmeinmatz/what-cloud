@@ -12,14 +12,19 @@ use serde_json::json;
 #[derive(Deserialize)]
 pub struct UserLogin {
     name: String,
+    #[serde(rename = "passwordBase64")]
     password_base64: String
 }
 
 #[derive(Serialize)]
 pub struct UserLoginResponse {
     name: String,
+    #[serde(rename = "profilePictureUrl")]
     profile_picture_url: Option<String>,
-    auth_token: String
+    #[serde(rename = "authToken")]
+    auth_token: String,
+    #[serde(rename = "userId")]
+    user_id: UserID
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -119,7 +124,8 @@ pub fn login(mut login_data: Json<UserLogin>,
             return Ok(Json(UserLoginResponse {
                 name: std::mem::replace(&mut login_data.name, String::new()),
                 profile_picture_url: None,
-                auth_token: token_storage().new_user_token(user.id).iter().map(|e| *e as char).collect()
+                auth_token: token_storage().new_user_token(user.id.clone()).iter().map(|e| *e as char).collect(),
+                user_id: user.id
             }))
         }
     }

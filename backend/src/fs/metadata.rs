@@ -21,7 +21,7 @@ pub fn get_metadata(
     db: State<SharedDatabase>,
 ) -> Option<NodeMetadata> {
     let shared: Option<String> = db
-        .get_share_id(&user_id, &std::path::Path::new(&path))
+        .get_share_id(&user_id, path)
         .ok()
         .flatten();
 

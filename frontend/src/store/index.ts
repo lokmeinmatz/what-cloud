@@ -1,10 +1,7 @@
+import { UserLogin, UserLoginResponse } from '@/business/nettypes'
 import { ref, watch } from 'vue'
 import { Node } from '../business/fs'
 
-export interface User {
-    auth_token: string;
-    name: string;
-}
 
 export enum DisplayModeType {
     Files = 'files',
@@ -30,19 +27,25 @@ if (maybeUser) console.log('loaded user from localStorage...')
 
 export const store =  {
     auth: {
-        user: ref<User | null>((maybeUser != null) ? JSON.parse(maybeUser) : null),
+        user: ref<UserLoginResponse | null>((maybeUser != null) ? JSON.parse(maybeUser) as UserLoginResponse : null),
         async logIn(name: string, password: string) {
             const url = '/api/user/login'
             console.log(url)
+
+            const body: UserLogin = {
+                name, 
+                passwordBase64: btoa(password)
+            }
+
             const res = await fetch(url, {
                 method: 'POST',
                 // eslint-disable-next-line
-                body: JSON.stringify({name, password_base64: btoa(password)})
+                body: JSON.stringify(body)
             })
             if (res.ok) {
-                const resBody = await res.json()
+                const resBody: UserLoginResponse = await res.json()
                 console.log("response of login:", resBody)
-                if (resBody.name && resBody.auth_token) {
+                if (resBody.name && resBody.authToken) {
                     store.auth.user.value = resBody
                     return
                 }

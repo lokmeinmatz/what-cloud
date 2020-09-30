@@ -83,7 +83,7 @@ router.beforeEach(async (to, from, next) => {
 
   const loginState = await fetch('/api/user', {
     headers: {
-      'Authorization': `Bearer ${store.auth.user.value?.auth_token}`
+      'Authorization': `Bearer ${store.auth.user.value?.authToken}`
     }
   })
 
