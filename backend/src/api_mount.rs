@@ -7,6 +7,7 @@ pub fn mount_api() -> Vec<Route> {
         crate::fs::get_node_data_shared,
         crate::fs::get_node_data,
         crate::fs::download_file,
+        crate::fs::download_shared_file,
         crate::fs::shared::update_folder_share,
         crate::fs::shared::get_my_shared,
         crate::icons::icons_get,

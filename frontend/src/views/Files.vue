@@ -29,7 +29,6 @@ import { getNode, GetNodeError, Node } from '../business/fs'
 import router from '../router'
 
 
-
 export default defineComponent({
   name: 'Files',
   components: {

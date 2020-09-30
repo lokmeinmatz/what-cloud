@@ -45,7 +45,7 @@ export default defineComponent({
 
     return {
       interpolatedStorageUsed,
-      userName: store.auth.user.value?.name,
+      userName: store.user.value?.name,
       storageUsed
     }
   }

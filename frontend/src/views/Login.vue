@@ -40,7 +40,7 @@ export default defineComponent({
       console.log('logging in...')
       this.loggingIn = true
       try {
-        await store.auth.logIn(this.name, this.passwordRaw)
+        await store.logIn(this.name, this.passwordRaw)
         this.loggingIn = false
         this.$router.push('/')
       } catch (error) {

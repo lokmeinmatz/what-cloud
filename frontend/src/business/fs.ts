@@ -50,7 +50,7 @@ export class Node {
         try {
             res = await fetch(url, {
                 headers: {
-                    'Authorization': `Bearer ${store.auth.user.value?.authToken}`
+                    'Authorization': `Bearer ${store.user.value?.authToken}`
                 }
             })
         }
@@ -130,7 +130,10 @@ export class Node {
     }
 
     downloadLink(): string {
-        return `/api/download/file?path=${encodeURIComponent(this.path())}&token=${store.auth.user.value?.authToken}`
+        if (store.displayMode.value.mode == DisplayModeType.Files) {
+            return `/api/download/file?path=${encodeURIComponent(this.path())}&token=${store.user.value?.authToken}`
+        }
+        return `/api/download/file?path=${encodeURIComponent(this.path())}&shared_id=${store.displayMode.value.sharedId}` 
     }
 
     async setShared(enabled: boolean) {
@@ -140,7 +143,7 @@ export class Node {
         const res = await fetch(url, {
             method: 'PATCH',
             headers: {
-                'Authorization': `Bearer ${store.auth.user.value?.authToken}`
+                'Authorization': `Bearer ${store.user.value?.authToken}`
             }
         })
         if (res.status != 200) {
@@ -272,7 +275,7 @@ export async function updateShared(shared: Array<{ path: string; share_id: strin
 
 export function reset() {
     console.log('set root node unfetched')
-    store.rootNode.value = new Folder('', undefined, [], null, store.auth.user.value?.userId || "unknown")
+    store.rootNode.value = new Folder('', undefined, [], null, store.user.value?.userId || "unknown")
 }
 
 reset()

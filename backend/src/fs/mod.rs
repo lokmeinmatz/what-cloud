@@ -1,3 +1,4 @@
+use rocket::http::RawStr;
 use crate::auth::UserID;
 use log::{info, warn};
 use path_slash::PathExt;
@@ -10,6 +11,7 @@ use std::path::{Path, PathBuf};
 pub mod metadata;
 pub mod shared;
 pub mod zipwriter;
+mod blocking_buf;
 
 ///
 #[derive(Serialize, Debug)]
@@ -233,14 +235,14 @@ pub enum FileDownloadResponse {
     #[response(status = 200)]
     File(NamedFile),
     #[response(status = 200)]
-    Zip(Stream<zipwriter::BlockingConsumer>),
+    Zip(Stream<blocking_buf::BlockingConsumer>),
     #[response(status = 401)]
     Unauthorized(()),
     #[response(status = 404)]
     NotFound(()),
 }
 
-#[get("/download/file?<path>&<token>")]
+#[get("/download/file?<path>&<token>", rank = 1)]
 pub fn download_file(path: NetFilePath, token: UserID) -> FileDownloadResponse {
     info!("User {:?} requested download of {:?}", token, path);
 
@@ -260,6 +262,20 @@ pub fn download_file(path: NetFilePath, token: UserID) -> FileDownloadResponse {
                 FileDownloadResponse::NotFound(())
             }
         }
+    }
+}
+
+#[get("/download/file?<path>&<shared_id>", rank = 2)]
+pub fn download_shared_file(mut path: NetFilePath, shared_id: &RawStr, db: State<SharedDatabase>) -> FileDownloadResponse {
+    info!("Shared download of {:?}", path);
+
+    if let Some(se) = db.get_shared_entry(&shared_id) {
+        
+        path.add_prefix(&se.path);
+        
+        download_file(path, se.user)
+    } else {
+        FileDownloadResponse::Unauthorized(())
     }
 }
 

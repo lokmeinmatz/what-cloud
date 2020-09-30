@@ -43,14 +43,14 @@ export default defineComponent({
   },
   methods: {
     async updateSharedList() {
-      if (store.auth.user.value == null) return;
+      if (!store.isLoggedIn.value) return;
 
       const url = "/api/shared";
       let res;
       try {
         res = await fetch(url, {
           headers: {
-            Authorization: `Bearer ${store.auth.user.value?.authToken}`,
+            Authorization: `Bearer ${store.user.value?.authToken}`,
           },
         });
       } catch (e) {
@@ -67,7 +67,7 @@ export default defineComponent({
     return {
       sharedEntries: [] as Node[],
       nodeInfo: null,
-      user: store.auth.user,
+      user: store.user,
     };
   },
 });

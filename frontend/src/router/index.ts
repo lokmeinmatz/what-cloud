@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory, Router, RouteRecordRaw } from 'vue-router'
 import Home from '../views/Home.vue'
 import Files from '../views/Files.vue'
+import SharedList from '../views/SharedList.vue'
 import { DisplayMode, DisplayModeType, store } from '../store'
 import * as Nprogress from 'nprogress'
 
@@ -13,43 +14,32 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/files/:fpath*',
     name: 'Files',
-    // route level code-splitting
-    // this generates a separate chunk (about.[hash].js) for this route
-    // which is lazy-loaded when the route is visited.
-    //component: () => import(/* webpackChunkName: "about" */ '../views/Files.vue')
     component: Files
   },
   {
     path: '/shared',
     name: 'ShareList',
-    // route level code-splitting
-    // this generates a separate chunk (about.[hash].js) for this route
-    // which is lazy-loaded when the route is visited.
-    component: () => import(/* webpackChunkName: "about" */ '../views/SharedList.vue')
-    //component: SharedList
+    component: SharedList
   },
   {
     path: '/shared/:sharedId/:fpath*',
     name: 'Share',
-    // route level code-splitting
-    // this generates a separate chunk (about.[hash].js) for this route
-    // which is lazy-loaded when the route is visited.
-    //component: () => import(/* webpackChunkName: "about" */ '../views/Files.vue')
     component: Files
   },
   {
     path: '/login',
     name: 'Login',
-    // route level code-splitting
-    // this generates a separate chunk (about.[hash].js) for this route
-    // which is lazy-loaded when the route is visited.
-    //component: () => import(/* webpackChunkName: "about" */ '../views/Files.vue')
     component: () => import(/* webpackChunkName: "login" */ '../views/Login.vue')
   },
   {
     path: '/logout',
     name: 'Logout',
     component: () => import(/* webpackChunkName: "logout" */ '../views/Logout.vue')
+  },
+  {
+    path: '/settings',
+    name: 'Settings',
+    component: () => import(/* webpackChunkName: "settings" */ '../views/Settings.vue')
   }
 ]
 
@@ -75,7 +65,7 @@ router.beforeEach(async (to, from, next) => {
 
   //TODO check if logged in
   if (to.path == '/login' || to.path == '/logout' || to.path.startsWith('/shared')) return next()
-  if (store.auth.user.value == null) {
+  if (store.user.value == null) {
     console.warn('no user logged in. redirecting to /login')
     return next('/login')
   }
@@ -83,13 +73,13 @@ router.beforeEach(async (to, from, next) => {
 
   const loginState = await fetch('/api/user', {
     headers: {
-      'Authorization': `Bearer ${store.auth.user.value?.authToken}`
+      'Authorization': `Bearer ${store.user.value?.authToken}`
     }
   })
 
-  if (loginState.status == 200 && store.auth.user.value != null) next()
+  if (loginState.status == 200 && store.user.value != null) next()
   else {
-    store.auth.user.value = null
+    store.user.value = null
     //console.log('Not logged in, redirecting to login')
     next('/login')
 

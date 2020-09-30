@@ -1,87 +1,63 @@
-use std::sync::{Mutex, Arc};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::thread::JoinHandle;
+use std::sync::{Mutex, Condvar};
+use std::sync::atomic::{Ordering, AtomicUsize};
+
 use streamed_zip_rs;
-use std::io::Read;
-use ringbuf::{Consumer, RingBuffer};
-use log::{info, error, warn};
+use ringbuf::{RingBuffer};
+use log::{info, error};
 use lazy_static::lazy_static;
+
+use super::blocking_buf::{BlockingConsumer, split_blocking};
 
 lazy_static! {
     /// Thread handle and a terminated flag
-    static ref ZIP_WRITER_THREAD: Mutex<Vec<(JoinHandle<()>, Arc<AtomicBool>)>> = Mutex::new(Vec::new());
-
+    static ref ZIP_WRITER_THREAD_COUNT: Mutex<usize> = Mutex::new(0);
+    static ref ZIP_WRITER_FINISHED: Condvar = Condvar::new();
 }
+
+
+static WRITER_ID: AtomicUsize = AtomicUsize::new(0);
 const MAX_ZIP_WRITERS: usize = 4;
 
-/// A Consumer that blocks until data is in the buffer, and
-/// can get terminated from the Producer
-pub struct BlockingConsumer {
-    inner: Consumer<u8>,
-    terminator: Arc<AtomicBool>
-}
 
-impl BlockingConsumer {
-    /// Returns Self and an Arc<AtomicBool>> to terminate the Consumer
-    pub fn new(inner: Consumer<u8>) -> (Self, Arc<AtomicBool>) {
-        let terminator = Arc::new(AtomicBool::new(false));
-        (Self {
-            inner,
-            terminator: terminator.clone()
-        }, terminator)
-    }
 
-    pub fn read_blocking(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        while self.inner.is_empty() && !self.terminator.load(Ordering::SeqCst) {
-            std::thread::yield_now();
-        }
-        if self.terminator.load(Ordering::SeqCst) {
-            return Ok(0);
-        }
-        self.inner.read(buf)
-    }
-}
 
-impl Read for BlockingConsumer {
-    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        self.read_blocking(buf)
-    }
-}
 
+/// Creates a new thread (if not more than MAX_ZIP_WRITERS exist), who will stream the folder into an ringbuffer with 4KiB size.
+/// Thread is responsible for decrementing counter if finished and notify change via condvar
 pub fn new_zip_writer(path: std::path::PathBuf) -> Result<BlockingConsumer, &'static str> {
 
-    let mut threads = ZIP_WRITER_THREAD.lock().map_err(|_| "Failed to get lock")?;
+    // maybe find a better way to fail if waited too long??
+    let mut thread_count = ZIP_WRITER_THREAD_COUNT.lock().map_err(|_| "Failed to get lock")?;
 
-    // check if any old threads can get cleaned up
-    let mut i = 0;
-    while i < threads.len() {
-        if !threads[i].1.load(Ordering::SeqCst) {
-            // thread is terminated, can get replaced
-            let jh = threads.remove(i).0;
-            if let Err(e) = jh.join() {
-                error!("Some ZIP writer thread join returned Err: {:?}", e);
-            }
-        }
-        i += 1;
-    }
-    let len = threads.len();
-    if len >= MAX_ZIP_WRITERS {
-        warn!("Tried to create more ZIP writer threads than allowed");
-        return Err("Cannot produce more than 4 zip streams at the same time :(");
-    }
-    let (prod, cons) = RingBuffer::new(4096).split();
-    let (cons, term) = BlockingConsumer::new(cons);
-    let term2 = term.clone();
-    let worker = std::thread::Builder::new()
-    .name(format!("ZIP worker #{}", len))
+    
+    thread_count = ZIP_WRITER_FINISHED.wait_while(thread_count, |tc| *tc >= MAX_ZIP_WRITERS).map_err(|_| "Failed to get lock")?;
+    
+    *thread_count += 1;
+
+    // unlock
+    drop(thread_count);
+    
+    let (prod, cons) = split_blocking(RingBuffer::new(4096));
+
+    let id = WRITER_ID.fetch_add(1, Ordering::SeqCst);
+    std::thread::Builder::new()
+    .name(format!("ZIP worker #{}", id))
     .spawn(move || {
-        info!("Starting zip folder stream of worker #{}", len);
+        let start = std::time::Instant::now();
+        info!("Starting zip folder stream of worker #{}", id);
         if let Err(e) = streamed_zip_rs::ZipStream::stream_folder(prod, &path) {
             error!("Error while streaming zip: {:?}", e);
         }
-        info!("Finished zip folder stream of worker #{}", len);
-        term.store(true, Ordering::SeqCst);
+
+        // terminate consumer
+        // decrease counter and notify others that they can continue
+        let mut thread_count = ZIP_WRITER_THREAD_COUNT.lock().expect("Zip worker failed to get lock, its poisoned");
+        *thread_count -= 1;
+        info!("Finished zip folder stream of worker #{} | ZIP worker active: {} | took {}s", 
+            id, 
+            thread_count, 
+            start.elapsed().as_secs_f64());
+        ZIP_WRITER_FINISHED.notify_one();
     }).map_err(|_| "Failed to start ZIP worker thread")?;
-    threads.push((worker, term2));
     Ok(cons)
 }

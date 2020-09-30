@@ -4,7 +4,6 @@ use crate::fs::NetFilePath;
 use crate::auth::UserID;
 use crate::database::SharedDatabase;
 use log::info;
-use rocket::http::RawStr;
 use rocket::State;
 use rocket_contrib::json::Json;
 

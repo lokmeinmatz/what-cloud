@@ -138,7 +138,7 @@ export default defineComponent({
     });
 
     const nodeIsOwned = computed<boolean>(() => {
-      return props.file?.ownedBy == store.auth.user.value?.userId
+      return props.file?.ownedBy == store.user.value?.userId
     })
 
     const sharedToggle = computed({
