@@ -1,9 +1,10 @@
 use crate::auth::UserID;
 use log::{info, warn};
-use rocket::http::RawStr;
+use path_slash::PathExt;
 use rocket::request::FromFormValue;
 use rocket::response::{NamedFile, Responder};
 use rocket_contrib::json::Json;
+use std::borrow::Borrow;
 use std::path::{Path, PathBuf};
 
 pub mod metadata;
@@ -24,20 +25,43 @@ pub struct NetNode {
     owned_by: UserID,
 }
 
+#[derive(Debug)]
 pub struct NetFilePath(String);
 
 impl NetFilePath {
+    pub fn from_path<P: AsRef<Path>>(path: P) -> Self {
+        Self(path.as_ref().to_slash_lossy())
+    }
+
     pub fn add_prefix<P: AsRef<Path>>(&mut self, prefix: P) {
-        todo!()
+        let mut n_base: String = prefix.as_ref().to_slash_lossy();
+        if n_base.ends_with('/') && self.0.starts_with('/') {
+            n_base.push_str(&self.0[1..]);
+        } else if n_base.ends_with('/') || self.0.starts_with('/') {
+            n_base.push_str(&self.0);
+        } else if self.0.len() > 0 {
+            n_base.push('/');
+            n_base.push_str(&self.0);
+        }
+        self.0 = n_base;
+    }
+}
+
+impl Borrow<str> for NetFilePath {
+    fn borrow(&self) -> &str {
+        &self.0
+    }
+}
+
+impl Borrow<Path> for NetFilePath {
+    fn borrow(&self) -> &Path {
+        &Path::new(&self.0)
     }
 }
 
 impl<'v> FromFormValue<'v> for NetFilePath {
     type Error = ();
-    fn from_form_value(
-        raw: &'v rocket::http::RawStr,
-    ) -> Result<Self, Self::Error> {
-
+    fn from_form_value(raw: &'v rocket::http::RawStr) -> Result<Self, Self::Error> {
         let mut raw_path: String = match raw.percent_decode() {
             Ok(s) => s.into_owned(),
             Err(_) => {
@@ -78,9 +102,7 @@ fn to_abs_data_path<P: AsRef<Path>>(user: &UserID, p: P) -> PathBuf {
 }
 
 use super::database::SharedDatabase;
-use path_slash::PathExt;
 use rocket::State;
-
 
 #[get("/node?<file_path>&<shared_id>", rank = 1)]
 pub fn get_node_data_shared(
@@ -91,27 +113,21 @@ pub fn get_node_data_shared(
     // check if shared id is allowed
     if let Some(se) = db.get_shared_entry(&shared_id) {
         
-        // TODO why join???
-        file_path.add_prefix(se.path);
-        dbg!(&file_path);
-        get_node(&share_path, se.user, db, Some(&se.path))
+        file_path.add_prefix(&se.path);
+        
+        get_node(file_path, se.user, db, Some(&se.path))
     } else {
         NodeContentResponse::PathNotFound("Shared ID doesn't exist".into())
     }
 }
 
-#[get("/node?<url_encoded_path>", rank = 2)]
+#[get("/node?<file_path>", rank = 2)]
 pub fn get_node_data(
-    url_encoded_path: &RawStr,
+    file_path: NetFilePath,
     user_id: UserID,
     db: State<SharedDatabase>,
 ) -> NodeContentResponse {
-    let folder_path = match url_encoded_to_rel_path(url_encoded_path) {
-        Ok(p) => p,
-        Err(e) => return NodeContentResponse::WrongDecoding(e.into()),
-    };
-
-    get_node(&folder_path, user_id, db, None)
+    get_node(file_path, user_id, db, None)
 }
 
 /// folder_path: Path from base folder of user, but WITHOUT user_id prefix!!!
@@ -121,7 +137,6 @@ fn get_node(
     db: State<SharedDatabase>,
     base_path: Option<&Path>,
 ) -> NodeContentResponse {
-    let combined = to_abs_data_path(&user_id, &folder_path);
     let mut root: PathBuf = PathBuf::from(crate::config::data_path());
     root.push(&user_id.0);
     if !root.exists() {
@@ -130,6 +145,8 @@ fn get_node(
             Err(e) => warn!("Failed to create base dir of user {}: {:?}", user_id.0, e),
         }
     }
+    root.push(Borrow::<str>::borrow(&folder_path));
+    let combined = root;
     if !combined.exists() {
         // check if user has allready folder or needs to get created
         return NodeContentResponse::PathNotFound("Path doesn't exist".into());
@@ -142,6 +159,8 @@ fn get_node(
     let is_dir = combined.is_dir();
 
     // collects either all components to an Vec<String> or skips the ones that are in the base_path for shared nodes
+    let folder_path = Borrow::<Path>::borrow(&folder_path);
+
     let path_from_root = match base_path {
         None => folder_path.components(),
         Some(bp) => {
@@ -188,7 +207,7 @@ fn get_node(
             }
         }
     }
-    dbg!(folder_path);
+    
     let metadata = match metadata::get_metadata(&folder_path, &user_id, db) {
         Some(md) => md,
         None => return NodeContentResponse::DirError("Metadata fetch failed".into()),
@@ -222,15 +241,12 @@ pub enum FileDownloadResponse {
 }
 
 #[get("/download/file?<path>&<token>")]
-pub fn download_file(path: &RawStr, token: UserID) -> FileDownloadResponse {
-    info!("User {:?} requested download of {}", token, path);
+pub fn download_file(path: NetFilePath, token: UserID) -> FileDownloadResponse {
+    info!("User {:?} requested download of {:?}", token, path);
 
-    let folder_path = match url_encoded_to_rel_path(path) {
-        Ok(p) => p,
-        Err(e) => return FileDownloadResponse::NotFound(()),
-    };
 
-    let abs_path = to_abs_data_path(&token, &folder_path);
+
+    let abs_path = to_abs_data_path(&token, Borrow::<Path>::borrow(&path));
 
     if abs_path.is_dir() {
         // handle zip file
@@ -244,5 +260,19 @@ pub fn download_file(path: &RawStr, token: UserID) -> FileDownloadResponse {
                 FileDownloadResponse::NotFound(())
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::*;
+
+    #[test]
+    fn test_netfilepath() {
+        let mut nfp = NetFilePath::from_path("/folder1/test");
+        assert_eq!(Borrow::<str>::borrow(&nfp), "/folder1/test");
+        nfp.add_prefix("\\User1\\");
+        assert_eq!(Borrow::<str>::borrow(&nfp), "/User1/folder1/test");
     }
 }

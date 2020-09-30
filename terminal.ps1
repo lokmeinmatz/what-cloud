@@ -1,1 +1,0 @@
-wt -p "Windows PowerShell" -d "$pwd\frontend"`; split-pane -p "Windows PowerShell" -d "$pwd\backend"

@@ -42,7 +42,6 @@ impl SharedDatabase {
 
     pub fn get_share_id(&self, user_id: &UserID, path: &std::path::Path) -> Result<Option<String>, ()> {
         use rusqlite::OptionalExtension;
-        dbg!(user_id, path.to_str());
         let conn = self.conn();
         conn.query_row(
             "SELECT ID FROM SHARED WHERE USER = ? AND BASE_PATH = ?",

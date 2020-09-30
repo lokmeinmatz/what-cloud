@@ -4,9 +4,19 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "terminal",
+            "label": "terminal-horizontal",
             "type": "shell",
-            "command": "./terminal.ps1",
+            "command": "./terminal_horizontal.ps1",
+            "presentation": {
+                "reveal": "silent",
+                "focus": false,
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "terminal-vertical",
+            "type": "shell",
+            "command": "./terminal_vertical.ps1",
             "presentation": {
                 "reveal": "silent",
                 "focus": false,

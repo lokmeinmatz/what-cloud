@@ -134,7 +134,7 @@ export class Node {
     }
 
     async setShared(enabled: boolean) {
-        const url = `/api/folder/shared?url_encoded_path=${encodeURIComponent(pathArrayToString(this.pathFromRoot))}${enabled ? '&enabled=true' : ''}`
+        const url = `/api/folder/shared?path=${encodeURIComponent(pathArrayToString(this.pathFromRoot))}${enabled ? '&enabled=true' : ''}`
         //console.log(`Updating shared setting for node ${this.path()}`)
 
         const res = await fetch(url, {

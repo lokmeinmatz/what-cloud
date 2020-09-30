@@ -1,3 +1,6 @@
+use std::path::Path;
+use std::borrow::Borrow;
+use crate::fs::NetFilePath;
 use crate::auth::UserID;
 use crate::database::SharedDatabase;
 use log::info;
@@ -25,23 +28,22 @@ impl SharedID {
 
 
 /// Set folders / files shared state
-#[patch("/folder/shared?<url_encoded_path>&<enabled>")]
+#[patch("/folder/shared?<path>&<enabled>")]
 pub fn update_folder_share(
-    url_encoded_path: &RawStr,
+    path: NetFilePath,
     enabled: bool,
     user_id: UserID,
     db: State<SharedDatabase>,
 ) -> Result<String, ()> {
-    let folder_path = super::url_encoded_to_rel_path(url_encoded_path).map_err(drop)?;
-    let combined = super::to_abs_data_path(&user_id, &folder_path);
+    let combined = super::to_abs_data_path(&user_id, Borrow::<Path>::borrow(&path));
     if !combined.exists() {
         return Err(());
     }
     // create new share
-    let r = db.update_share(&user_id, &folder_path, enabled);
+    let r = db.update_share(&user_id, Borrow::<Path>::borrow(&path), enabled);
     info!(
         "User {} set shared of {:?} to {:?}",
-        &user_id, &folder_path, &r
+        &user_id, &path, &r
     );
     r.ok_or(())
 }
