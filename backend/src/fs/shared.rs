@@ -34,8 +34,8 @@ pub fn update_folder_share(
     user_id: UserID,
     db: State<SharedDatabase>,
 ) -> Result<String, ()> {
-    let combined = super::to_abs_data_path(&user_id, Borrow::<Path>::borrow(&path));
-    if !combined.exists() {
+    let combined: PathBuf = super::to_abs_data_path(&user_id, Borrow::<Path>::borrow(&path));
+    if !combined.exists() || combined.is_file() {
         return Err(());
     }
     // create new share
