@@ -1,6 +1,7 @@
 High Prio:
-  ☐ zip folder stream crashes with WouldBlock, something on BlockingProducer / Consumer is not right!!! @started(20-10-05 00:04)
+  ✔ zip folder stream crashes with WouldBlock, something on BlockingProducer / Consumer is not right!!! @started(20-10-05 00:04) @done(20-10-06 13:43) @lasted(1d13h39m)
   ☐ FileInfo should only show shared tick if server acknoleged it -> maybe not use vmodel?
+  ☐ reset file cache if switching from /files to /shared and between shared 
 
 Backend:
   ☐ Cache data based on hash of file name and last modified date?

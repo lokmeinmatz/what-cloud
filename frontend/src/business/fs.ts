@@ -24,6 +24,7 @@ export class Node {
     name: string
     pathFromRoot: string[]
     fetched: boolean
+    parent?: Folder
     shared: string | null
     type = NodeType.Node
     size = -1
@@ -82,10 +83,20 @@ export class Node {
                     return err('Got Folder expected File')
                 }
                 /* eslint-disable @typescript-eslint/no-use-before-define */
-                (this as Folder).children = [
+                const t = this as unknown as Folder
+                t.children = [
                     ...snode.childrenFolder.map((f: string) => new Folder(f, undefined, snode.pathFromRoot.concat([f]), null, snode.ownedBy)),
                     ...snode.files.map((f: string) => new File(f, snode.pathFromRoot.concat([f]).filter((e: string) => e.length > 0), null, snode.ownedBy))
-                ]
+                ];
+
+                if (t.children != undefined) {
+                    for(const n of t.children) {
+                        n.parent = t
+                        if (n instanceof File) {
+                            await n.fetch()
+                        }
+                    }
+                }
                 /* eslint-enable @typescript-eslint/no-use-before-define */
 
             } else if (snode.metadata.type == NodeType.File) {
@@ -104,6 +115,7 @@ export class Node {
             // cast undefined to null, is there a more elegant way???
             this.shared = snode.metadata.shared == undefined ? null : snode.metadata.shared
             this.ownedBy = snode.ownedBy
+            this.parent?.updateSize()
 
         }
         else {
@@ -171,6 +183,12 @@ export class Folder extends Node {
         this.type = NodeType.Folder
 
         this.children = children
+    }
+
+    updateSize() {
+        // a child size changed, calculate new size and call this on parent if existing
+        this.size = this.children?.reduce((acc, node) => acc + Math.max(node.size, 0), 0) || 0
+        console.log(this, this.size)
     }
 }
 
@@ -274,7 +292,7 @@ export async function updateShared(shared: Array<{ path: string; share_id: strin
 
 
 export function reset() {
-    console.log('set root node unfetched')
+    console.log('Reset of filesystem cache')
     store.rootNode.value = new Folder('', undefined, [], null, store.user.value?.userId || "unknown")
 }
 

@@ -33,7 +33,6 @@ pub fn new_zip_writer(path: std::path::PathBuf) -> Result<BlockingConsumer, &'st
     thread_count = ZIP_WRITER_FINISHED.wait_while(thread_count, |tc| *tc >= MAX_ZIP_WRITERS).map_err(|_| "Failed to get lock")?;
     
     *thread_count += 1;
-
     // unlock
     drop(thread_count);
     
