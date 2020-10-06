@@ -148,7 +148,7 @@ export class Node {
         return `/api/download/file?path=${encodeURIComponent(this.path())}&shared_id=${store.displayMode.value.sharedId}` 
     }
 
-    async setShared(enabled: boolean) {
+    async setShared(enabled: boolean): Promise<boolean> {
         const url = `/api/folder/shared?path=${encodeURIComponent(pathArrayToString(this.pathFromRoot))}${enabled ? '&enabled=true' : ''}`
         //console.log(`Updating shared setting for node ${this.path()}`)
 
@@ -169,6 +169,7 @@ export class Node {
         console.log('shared update:', id)
         if (id.length == 0) this.shared = null
         else this.shared = id
+        return true
     }
 }
 

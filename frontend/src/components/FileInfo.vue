@@ -35,7 +35,7 @@
                 <td>Modified</td>
                 <td>{{ file.lastModified }}</td>
               </tr>
-              <tr v-if="nodeIsOwned">
+              <tr v-if="nodeCanGetShared">
                 <td>Share</td>
                 <td>
                   <input
@@ -48,7 +48,7 @@
                   <label class="form-check-label" for="share-this">Share this folder</label>
                 </td>
               </tr>
-              <tr v-else>
+              <tr v-else-if="file.shared != null">
                 <td>Shared by</td>
                 <td>{{file.ownedBy}}</td>
               </tr>
@@ -85,7 +85,7 @@
 
 <script lang="ts">
 import { computed, defineComponent, ref, PropType, watch } from "vue";
-import { Node } from "../business/fs";
+import { Folder, Node } from "../business/fs";
 import { ByteToFormattedString } from "../business/utils";
 import { store } from '../store'
 export default defineComponent({
@@ -137,17 +137,23 @@ export default defineComponent({
       );
     });
 
-    const nodeIsOwned = computed<boolean>(() => {
-      return props.file?.ownedBy == store.user.value?.userId
+    const nodeCanGetShared = computed<boolean>(() => {
+      return props.file?.ownedBy == store.user.value?.userId && props.file instanceof Folder
     })
 
     const sharedToggle = computed({
       get(): boolean {
         return (props.file as Node).shared != null;
       },
-      set(v: boolean) {
+      async set(v: boolean) {
         console.log("Setting share of curr node:", v);
-        (props.file as Node).setShared(v);
+        if (!v) {
+          //ask if user really wants to deactiveate it
+          if (!confirm("Are you shure you want to remove this share? Its URL can't be restored")) {
+            return
+          }
+        }
+        await (props.file as Node).setShared(v);
         emit("data-updated");
       },
     });
@@ -160,7 +166,7 @@ export default defineComponent({
       copiedToast,
       sharedLink,
       copyShared,
-      nodeIsOwned
+      nodeCanGetShared
     };
   }
 });
