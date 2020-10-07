@@ -4,7 +4,7 @@
     <div class="card col-md-3">
       <div class="card-img-top">
         <div class="progress">
-          <div class="progress-bar" role="progressbar" :style="{width: interpolatedStorageUsed / 5000 + '%'}" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
+          <div class="progress-bar" role="progressbar" :style="{width: interpolatedStorageUsed / 5000 + '%'}" aria-valuemin="0" aria-valuemax="100"></div>
         </div>
       </div>
       <div class="card-body">
@@ -55,6 +55,14 @@ export default defineComponent({
 h1 {
   text-align: center;
   margin-top: 1em;
+}
+
+.dark .card {
+  background-color: #111;
+}
+
+.dark .progress {
+  background-color: #444;
 }
 
 .progress {

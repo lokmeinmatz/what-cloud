@@ -47,6 +47,11 @@ export default defineComponent({
 .fs-item a {
   text-align: left;
 }
+
+.dark .fs-item a:hover {
+  color: var(--cyan);
+}
+
 .fs-item {
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr) 3em 4em;
@@ -54,6 +59,8 @@ export default defineComponent({
   align-items: center;
   min-height: 2em;
   padding: 0.5em;
+  background-color: transparent;
+  border-color: rgba(128, 128, 128, 0.2);
 }
 
 .fs-item:hover {
