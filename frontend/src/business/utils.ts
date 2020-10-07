@@ -46,6 +46,6 @@ export function randString(length: number): string {
 
 
 export function debugWindowProp(name: string, data: any) {
-    console.log(`updated debug window property '${name}'`);
+    console.warn(`updated debug window property '${name}'`);
     (window as any)[name] = data
 }

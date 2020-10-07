@@ -1,5 +1,5 @@
 <template>
-  <a :download="file.type == 'file' ? file.name : `${file.name}.zip`" :href="file.downloadLink()" class="btn btn-light">
+  <a :download="file.type == 'file' ? file.name : `${file.name}.zip`" :href="file.downloadLink()" class="btn">
     <svg fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" stroke="currentColor"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
   </a>
 </template>
@@ -8,6 +8,7 @@
 <script lang="ts">
 import { defineComponent } from 'vue'
 import { Node } from '../business/fs'
+import { store } from '../store'
 
 export default defineComponent({
   name: 'DownloadButton',
@@ -28,4 +29,11 @@ export default defineComponent({
 </script>
 
 <style scoped>
+.btn {
+  background-color: rgba(128, 128, 128, 0.1);
+}
+
+.btn:hover {
+  background-color: rgba(128, 128, 128, 0.3);
+}
 </style>

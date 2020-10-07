@@ -53,6 +53,20 @@ export default defineComponent({
 })
 </script>
 <style scoped>
+.dark .card {
+  background-color: #111;
+}
+
+.dark input {
+  background-color: #222;
+  color: #ccc;
+  border-color: #777;
+}
+
+.dark label, .dark *::placeholder {
+  color: #ccc;
+}
+
 h1 {
   text-align: center;
   margin-top: 1em;

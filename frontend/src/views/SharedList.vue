@@ -12,8 +12,8 @@
         />
       </div>
       <div v-else class="alert alert-primary" role="alert">
-        <h4 class="altert-heading">You didn't share any data!</h4>
-        <p>To share, got to the Info-panel of the desired File / Folder and tick 'Share this folder'.</p>
+        <h4 class="altert-heading text-dark">You didn't share any data!</h4>
+        <p class="text-dark">To share, got to the Info-panel of the desired File / Folder and tick 'Share this folder'.</p>
         </div>
     </main>
     <main v-else class="container-sm">

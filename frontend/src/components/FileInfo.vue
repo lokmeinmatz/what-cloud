@@ -5,14 +5,11 @@
         <div class="card-header" style="display: grid; grid-template-columns: auto min-content;">
           <p style="margin: 0; vertical-align: center;">File Info</p>
           <button
-            class="btn btn-outline-danger"
-            style="padding: 0.5em; display: grid;"
+            class="btn btn-outline-danger close"
+            aria-label="Close Info"
             @click="close"
           >
-            <svg width="10" height="10">
-              <line x1="0" y1="0" x2="10" y2="10" stroke="currentColor" />
-              <line x1="0" y1="10" x2="10" y2="0" stroke="currentColor" />
-            </svg>
+            <span aria-hidden="true">&times;</span>
           </button>
         </div>
         <div class="card-body" style="postion:absolute;">
@@ -57,6 +54,7 @@
                 <td>
                   <input
                     @click="copyShared"
+                    id="sharedLink"
                     readonly
                     type="text"
                     ref="sharedLink"
@@ -178,6 +176,21 @@ export default defineComponent({
   width: 100%;
   max-width: 90vw;
 }
+
+.close {
+  padding: 0;
+  width: 1em;
+  height: 1em;
+}
+
+.dark .card {
+  background-color: #111;
+}
+
+.dark .card-header {
+  background-color: #222;
+}
+
 .card-title {
   display: grid;
   grid-template-columns: 3em minmax(0, 1fr);
@@ -211,6 +224,12 @@ export default defineComponent({
   justify-content: center;
 }
 
+.dark #sharedLink {
+  background-color: #111;
+  border-radius: 0.2em;
+  border: #444 2px solid;
+}
+
 #meta-loader {
   position: absolute;
   width: 100%;
@@ -230,7 +249,7 @@ export default defineComponent({
     top: 0;
     height: 100vh;
     width: 100vw;
-    background-color: rgba(0, 0, 0, 0.1);
+    background-color: rgba(0, 0, 0, 0.2);
   }
 
   .flyin-enter-active,

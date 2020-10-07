@@ -1,4 +1,6 @@
 import { UserLogin, UserLoginResponse } from '@/business/nettypes'
+import { debugWindowProp } from '@/business/utils'
+import { settings } from 'nprogress'
 import { ref, watch, computed } from 'vue'
 import { Node } from '../business/fs'
 
@@ -21,10 +23,46 @@ export class DisplayMode {
     }
 }
 
+
+// === USER STORAGE LOAD ===
+
 const maybeUser = localStorage.getItem('user_ref')
 // TODO use refresh token to revalidate auth_token
 if (maybeUser) console.log('loaded user from localStorage...')
 
+let useDarkMode
+
+switch (localStorage.getItem('dark_mode')) {
+    case 'true':
+        useDarkMode = true
+        break
+    case 'false':
+        useDarkMode = false
+        break
+    case null:
+    default:
+        // use system color theme
+        if (!window.matchMedia || window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            useDarkMode = true
+        } else {
+            useDarkMode = false
+        }
+        break;
+}
+console.log(`Using theme ${useDarkMode ? 'Dark':'Light'}`)
+// === === === === ===
+
+class SettingsStore {
+    useDarkmode = ref(true)
+
+    constructor() {
+        // watch useDarkmode and set localStorage
+        watch(this.useDarkmode, mode => {
+            console.log('Updated darkmode preference')
+            localStorage.setItem('dark_mode', mode.toString())
+        })
+    }
+}
 
 class Store {
 
@@ -67,9 +105,14 @@ class Store {
     displayMode = ref<DisplayMode>(new DisplayMode(DisplayModeType.Files))
     rootNode = ref<Node | null>(null)
     baseUrl = location.protocol + '//' + location.host
+    settings = new SettingsStore()
 }
 
 export const store = new Store()
+
+store.settings.useDarkmode.value = useDarkMode
+
+debugWindowProp('store', store)
 
 watch(store.user, user => {
     console.log('updated localStorage user')
