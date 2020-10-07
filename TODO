@@ -1,16 +1,24 @@
-High Prio:
-  ✔ zip folder stream crashes with WouldBlock, something on BlockingProducer / Consumer is not right!!! @started(20-10-05 00:04) @done(20-10-06 13:43) @lasted(1d13h39m)
-  ☐ FileInfo should only show shared tick if server acknoleged it -> maybe not use vmodel?
-  ☐ reset file cache if switching from /files to /shared and between shared 
-
 Backend:
   ☐ Cache data based on hash of file name and last modified date?
   ☐ show used storage space if calculated
 
-Features:
-  Shared:
-    ☐ Shared files don't get deleted immedialtely but flagged with disabled - date
+Upload-Feature:
+  Server:
+    ☐ Create endpoint for logged-in-upload
+    ☐ Create endpoint for shared-upload
+    ☐ Add attibute to shared table if upload is allowed
+    ☐ Add method to store file to disk
+    ☐ Limit upload size?
+  Client:
+    ☐ Add drag and drop upload
+    ☐ Add file selector upload
+    ☐ MultiFile?
+    ☐ Add toggle to shared
+
 Archive:
+  ✔ FileInfo should only show shared tick if server acknoleged it -> maybe not use vmodel? @done(20-10-07 20:54) @project(High Prio)
+  ✔ reset file cache if switching from /files to /shared and between shared @done(20-10-07 20:54) @project(High Prio)
+  ✔ zip folder stream crashes with WouldBlock, something on BlockingProducer / Consumer is not right!!! @started(20-10-05 00:04) @done(20-10-06 13:43) @lasted(1d13h39m) @project(High Prio)
   ✔ Folder download @done(20-09-07 17:13) @project(Backend)
   ✔ On shared /api/node requests, set pathFromRoot so it starts at the shared folder base, not user base! @started(20-09-24 14:11) @done(20-09-28 22:37) @lasted(4d8h26m16s) @project(Backend)
   ✔ Download from shared with shared_id request key @started(20-09-30 21:49) @done(20-10-01 01:10) @lasted(3h21m38s) @project(Backend)
