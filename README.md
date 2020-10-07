@@ -14,3 +14,5 @@ Software used in this project:
 
 For API documentation see backend/readme.md
 **NOTE** The API is changing constantly so the readme is not allways up-to-date 
+
+icons: [https://heroicons.dev](Here)

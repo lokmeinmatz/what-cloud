@@ -16,6 +16,7 @@
       <h3 v-else>This folder doesn't exist 😥</h3>
     </main>
     <FileInfo v-model:file="nodeInfo"/>
+    <UploadButton id="upload" :folder="folder"/>
   </div>
 </template>
 <script lang="ts">
@@ -24,6 +25,7 @@ import { computed, defineComponent, ref, watch } from 'vue'
 import FileList from '../components/FileList.vue'
 import PathDisplay from '../components/PathDisplay.vue'
 import FileInfo from '../components/FileInfo.vue'
+import UploadButton from '../components/UploadButton.vue'
 import { DisplayModeType, store } from '../store'
 import { getNode, GetNodeError, Node } from '../business/fs'
 import router from '../router'
@@ -34,7 +36,8 @@ export default defineComponent({
   components: {
     FileList,
     PathDisplay,
-    FileInfo
+    FileInfo,
+    UploadButton
   },
   setup() {
     const folder = ref<'loading' |Node | null>('loading')
@@ -114,6 +117,13 @@ export default defineComponent({
   align-content: stretch;
   overflow-x: hidden;
   transition: grid-template-columns ease-out 0.3s;
+}
+
+#upload {
+  position: fixed;
+  right: 1em;
+  bottom: 1em;
+
 }
 
 #files.display-node-info {

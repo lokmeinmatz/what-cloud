@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 pub mod metadata;
 pub mod shared;
 pub mod zipwriter;
+pub mod upload;
 mod blocking_buf;
 
 ///
@@ -64,6 +65,7 @@ impl Borrow<Path> for NetFilePath {
 impl<'v> FromFormValue<'v> for NetFilePath {
     type Error = ();
     fn from_form_value(raw: &'v rocket::http::RawStr) -> Result<Self, Self::Error> {
+        dbg!(raw);
         let mut raw_path: String = match raw.percent_decode() {
             Ok(s) => s.into_owned(),
             Err(_) => {
@@ -79,6 +81,7 @@ impl<'v> FromFormValue<'v> for NetFilePath {
         if raw_path.starts_with('/') {
             raw_path.remove(0);
         }
+        dbg!(&raw_path);
         Ok(NetFilePath(Path::new(&raw_path).to_slash_lossy()))
     }
 }

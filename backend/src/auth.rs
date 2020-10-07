@@ -50,6 +50,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for UserID {
                     //info!("auth token req: {}", auth_token);
             
                     if let Some(ud) = token_storage.get_user_data(auth_token.as_bytes()) {
+                        dbg!("UserID success");
                         return Outcome::Success(ud.1.clone())
                     }
                 }

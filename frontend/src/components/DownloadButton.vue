@@ -8,7 +8,6 @@
 <script lang="ts">
 import { defineComponent } from 'vue'
 import { Node } from '../business/fs'
-import { store } from '../store'
 
 export default defineComponent({
   name: 'DownloadButton',

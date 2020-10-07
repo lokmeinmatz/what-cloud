@@ -10,6 +10,10 @@ use rocket_contrib::json::Json;
 #[derive(Serialize)]
 pub struct SharedID(String);
 
+mod flags {
+    pub const ALLOW_UPLOAD: usize = 0b01; 
+}
+
 impl SharedID {
     pub fn from_string_unchecked(id: String) -> Self {
         Self(id)
