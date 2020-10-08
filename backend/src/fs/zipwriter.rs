@@ -5,9 +5,7 @@ use streamed_zip_rs;
 use ringbuf::{RingBuffer};
 use log::{info, error};
 use lazy_static::lazy_static;
-
-use super::blocking_buf::{BlockingConsumer, split_blocking};
-
+use super::async_buf::{AsyncConsumer, split_blocking_async};
 lazy_static! {
     /// Thread handle and a terminated flag
     static ref ZIP_WRITER_THREAD_COUNT: Mutex<usize> = Mutex::new(0);
@@ -24,7 +22,7 @@ const MAX_ZIP_WRITERS: usize = 4;
 
 /// Creates a new thread (if not more than MAX_ZIP_WRITERS exist), who will stream the folder into an ringbuffer with 4KiB size.
 /// Thread is responsible for decrementing counter if finished and notify change via condvar
-pub fn new_zip_writer(path: std::path::PathBuf) -> Result<BlockingConsumer, &'static str> {
+pub fn new_zip_writer(path: std::path::PathBuf) -> Result<AsyncConsumer, &'static str> {
 
     // maybe find a better way to fail if waited too long??
     let mut thread_count = ZIP_WRITER_THREAD_COUNT.lock().map_err(|_| "Failed to get lock")?;
@@ -36,7 +34,7 @@ pub fn new_zip_writer(path: std::path::PathBuf) -> Result<BlockingConsumer, &'st
     // unlock
     drop(thread_count);
     
-    let (prod, cons) = split_blocking(RingBuffer::new(4096));
+    let (prod, cons) = split_blocking_async(RingBuffer::new(4096));
 
     let id = WRITER_ID.fetch_add(1, Ordering::SeqCst);
     std::thread::Builder::new()

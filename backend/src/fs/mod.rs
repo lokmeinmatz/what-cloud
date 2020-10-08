@@ -13,6 +13,7 @@ pub mod shared;
 pub mod zipwriter;
 pub mod upload;
 mod blocking_buf;
+mod async_buf;
 
 ///
 #[derive(Serialize, Debug)]
@@ -238,7 +239,7 @@ pub enum FileDownloadResponse {
     #[response(status = 200)]
     File(NamedFile),
     #[response(status = 200)]
-    Zip(Stream<blocking_buf::BlockingConsumer>),
+    Zip(Stream<async_buf::AsyncConsumer>),
     #[response(status = 401)]
     Unauthorized(()),
     #[response(status = 404)]
@@ -246,7 +247,7 @@ pub enum FileDownloadResponse {
 }
 
 #[get("/download/file?<path>&<token>", rank = 1)]
-pub fn download_file(path: NetFilePath, token: UserID) -> FileDownloadResponse {
+pub async fn download_file(path: NetFilePath, token: UserID) -> FileDownloadResponse {
     info!("User {:?} requested download of {:?}", token, path);
 
 
@@ -258,7 +259,7 @@ pub fn download_file(path: NetFilePath, token: UserID) -> FileDownloadResponse {
         let cons = zipwriter::new_zip_writer(abs_path).unwrap();
         FileDownloadResponse::Zip(Stream::chunked(cons, 4096))
     } else {
-        match NamedFile::open(&abs_path) {
+        match NamedFile::open(&abs_path).await {
             Ok(nf) => FileDownloadResponse::File(nf),
             Err(e) => {
                 warn!("Error while reading file {:?} : {:?}", abs_path, e);
@@ -269,14 +270,14 @@ pub fn download_file(path: NetFilePath, token: UserID) -> FileDownloadResponse {
 }
 
 #[get("/download/file?<path>&<shared_id>", rank = 2)]
-pub fn download_shared_file(mut path: NetFilePath, shared_id: &RawStr, db: State<SharedDatabase>) -> FileDownloadResponse {
+pub async fn download_shared_file(mut path: NetFilePath, shared_id: &RawStr, db: State<'_, SharedDatabase>) -> FileDownloadResponse {
     info!("Shared download of {:?}", path);
 
     if let Some(se) = db.get_shared_entry(&shared_id) {
         
         path.add_prefix(&se.path);
         
-        download_file(path, se.user)
+        download_file(path, se.user).await
     } else {
         FileDownloadResponse::Unauthorized(())
     }

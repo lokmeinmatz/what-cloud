@@ -28,9 +28,11 @@ fn cors() -> Cors {
         (&["http://localhost:8080", "http://192.168.178.38:8080"])).to_cors().unwrap()
 }
 
-fn main() {
 
-    simplelog::TermLogger::init(LevelFilter::Info, Config::default(), TerminalMode::Mixed).expect("simplelog failed");
+#[launch]
+fn rocket() -> rocket::Rocket {
+
+    simplelog::TermLogger::init(LevelFilter::Debug, Config::default(), TerminalMode::Mixed).expect("simplelog failed");
 
     info!("Loading dotenv vars...");
     if let Err(e) = dotenv::dotenv() {
@@ -52,5 +54,4 @@ fn main() {
         .mount("/", routes![index])
         .mount("/api/", api_routes)
         .attach(cors())
-        .launch();
 }

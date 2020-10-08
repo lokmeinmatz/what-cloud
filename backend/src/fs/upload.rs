@@ -12,9 +12,9 @@ use rocket::State;
 type UploadResponse = Result<status::Accepted<()>, status::Forbidden<()>>;
 
 #[post("/upload?<file_path>&<shared_id>", data = "<data>", rank = 1)]
-pub fn post_upload_shared(
+pub async fn post_upload_shared(
     mut file_path: NetFilePath,
-    db: State<SharedDatabase>,
+    db: State<'_, SharedDatabase>,
     shared_id: String,
     data: Data
 ) -> UploadResponse {
@@ -22,7 +22,7 @@ pub fn post_upload_shared(
     if let Some(se) = db.get_shared_entry(&shared_id) {
         file_path.add_prefix(&se.path);
 
-        return handle_upload(file_path, se.user, data);
+        return handle_upload(file_path, se.user, data).await;
     }
 
     // TODO add error details
@@ -30,16 +30,18 @@ pub fn post_upload_shared(
 }
 
 #[post("/upload?<file_path>", data = "<data>", rank = 2)]
-pub fn post_upload(
+pub async fn post_upload(
     file_path: NetFilePath,
     user_id: UserID,
     data: Data
 ) -> UploadResponse {
     dbg!(1);
-    handle_upload(file_path, user_id, data)
+    handle_upload(file_path, user_id, data).await
 }
 
-fn handle_upload(
+use rocket::data::ToByteUnit;
+
+async fn handle_upload(
     folder_path: NetFilePath,
     user_id: UserID,
     upload: Data
@@ -63,7 +65,7 @@ fn handle_upload(
     }
     info!("Streaing to file {:?}", root);
     // stream file to root
-    match upload.stream_to_file(&root) {
+    match upload.open(10.gibibytes()).stream_to_file(&root).await {
         Ok(size) => {
             info!("Uploaded {} bytes to {:?}", size, root);
             Ok(status::Accepted(None))
