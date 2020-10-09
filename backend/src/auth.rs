@@ -47,9 +47,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for UserID {
             if token.starts_with("Bearer ") {
                 let auth_token = &token[7..];
 
-                if auth_token.len() == crate::auth::AUTH_TOKEN_LEN {
-                    //info!("auth token req: {}", auth_token);
-            
+                if auth_token.len() == crate::auth::AUTH_TOKEN_LEN {            
                     if let Some(ud) = token_storage.get_user_data(auth_token.as_bytes()) {
                         return Outcome::Success(ud.1.clone())
                     }
@@ -69,7 +67,6 @@ impl<'v> FromFormValue<'v> for UserID {
     fn from_form_value(token: &'v RawStr) -> Result<UserID, ()> {
         
         if token.len() == crate::auth::AUTH_TOKEN_LEN {
-            //info!("auth token req: {}", auth_token);
 
             let token_storage = token_storage();
             if let Some(ud) = token_storage.get_user_data(token.as_bytes()) {
