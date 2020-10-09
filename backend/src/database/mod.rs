@@ -1,6 +1,6 @@
-use rusqlite::{Connection, params, Row};
+use rusqlite::{Connection, params, Row, ToSql};
 use std::sync::{Mutex, MutexGuard};
-use log::{info, trace};
+use log::{info, trace, warn};
 use std::convert::{TryFrom, TryInto};
 use std::path::{Path, PathBuf};
 use crate::auth::UserID;
@@ -66,6 +66,7 @@ impl SharedDatabase {
         }).ok()
     }
 
+    #[allow(dead_code)]
     pub fn is_active_shared_id(&self, id: &str) -> bool {
         let conn = self.conn();
         // returns 1 if id exists in table
@@ -92,29 +93,53 @@ impl SharedDatabase {
 
     }
 
+
+
     /// if enabled, returns the share id
     /// expects path to be valid 
-    pub fn update_share(&self, user_id: &UserID, path: &std::path::Path, enabled: bool) -> Option<String> {
+    /// `upload_limit` in megabytes
+    pub fn update_share(&self, user_id: &UserID, path: &std::path::Path, enabled: bool, mut upload_limit: Option<u32>) -> Option<SharedID> {
         let conn = self.conn();
         let path_str = path.to_str().unwrap();
         if enabled {
 
             // first check if share allready exists
-            let res: Option<String> = conn.query_row(
+            let id: SharedID = match conn.query_row(
                 "SELECT ID FROM SHARED WHERE USER = ? AND BASE_PATH = ?",
                 params![&user_id.0, path_str],
-            |row| row.get(0)).ok();
+            |row| row.get(0).map(|s| SharedID::from_string_unchecked(s))).ok() {
+                Some(id) => id,
+                None => {
+                    // generate new unique id
+                    loop {
+                        let share_id: String = crate::token_validizer::get_rand_token::<16>().iter().map(|e| *e as char).collect(); 
+                        if let Ok(false) = conn.query_row(
+                            "SELECT EXISITS(SELECT 1 FROM SHARED WHERE ID = ?)", 
+                            &[&share_id], |r| r.get::<usize, u32>(0).map(|e| e == 1)) {
+                            // shared id doesn't exist
+                            break SharedID::from_string_unchecked(share_id)
+                        } else {
+                            warn!("Generated existing shared id, retry...");
+                        }
+                    }
+                }
+            };
 
-            if res.is_some() { return res; }
+            if let Some(0) = upload_limit {
+                upload_limit = None;
+            }
+
+            // very unperformant
+            let upload_limit: Box<dyn ToSql> = upload_limit.map(|ul| Box::new(ul) as Box<dyn ToSql>).unwrap_or_else(|| Box::new(rusqlite::types::Null));
+
 
             // no share exists, create new
             // TODO check if share id allready exisits?
-            let share_id: String = crate::token_validizer::get_rand_token::<16>().iter().map(|e| *e as char).collect(); 
 
             conn.execute(
-                "INSERT INTO SHARED (ID, USER, BASE_PATH, CREATED_AT) VALUES (?, ?, ?, datetime('now'))", 
-                params![&share_id, &user_id.0, path_str]).ok()?;
-            Some(share_id)
+                "INSERT OR REPLACE INTO SHARED (ID, USER, BASE_PATH, CREATED_AT, UPLOAD_LIMIT) VALUES (?, ?, ?, datetime('now'))", 
+                params![id.as_ref(), &user_id.0, path_str, upload_limit]).ok()?;
+            Some(id)
         } else {
 
             conn.execute("DELETE FROM SHARED WHERE BASE_PATH = ?", params![path_str]).ok();
@@ -135,6 +160,7 @@ impl TryFrom<String> for UserID {
     }
 }
 
+#[allow(dead_code)]
 pub enum GetUserQuery<'a> {
     ByName(&'a str),
     ByID(&'a UserID)

@@ -171,6 +171,10 @@ export class Node {
         else this.shared = id
         return true
     }
+
+    isMyNode(): boolean {
+        return this.ownedBy == store.user.value?.userId
+    }
 }
 
 

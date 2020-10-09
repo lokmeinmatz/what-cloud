@@ -36,9 +36,10 @@ impl std::fmt::Display for UserID {
      }
 }
 
+#[rocket::async_trait]
 impl<'a, 'r> FromRequest<'a, 'r> for UserID {
     type Error = ();
-    fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
+    async fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
         use rocket::http::Status;
         let token_storage = token_storage();
 

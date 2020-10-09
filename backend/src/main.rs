@@ -28,7 +28,9 @@ fn cors() -> Cors {
         (&["http://localhost:8080", "http://192.168.178.38:8080"])).to_cors().unwrap()
 }
 
-fn main() {
+
+#[launch]
+fn rocket() -> rocket::Rocket {
 
     simplelog::TermLogger::init(LevelFilter::Info, Config::default(), TerminalMode::Mixed).expect("simplelog failed");
 
@@ -38,7 +40,7 @@ fn main() {
     }
 
     config::init().expect("Failed to init config...");
-    token_validizer::init(true);
+    token_validizer::init(false);
 
     let db = database::SharedDatabase::new(config::db_path());
 
@@ -52,5 +54,4 @@ fn main() {
         .mount("/", routes![index])
         .mount("/api/", api_routes)
         .attach(cors())
-        .launch();
 }

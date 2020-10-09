@@ -25,7 +25,6 @@ pub fn get_metadata(
         .ok()
         .flatten();
 
-    //dbg!(&shared);
 
     let combined = super::to_abs_data_path(&user_id, path);
     let mut root: PathBuf = PathBuf::from(crate::config::data_path());
@@ -42,8 +41,7 @@ pub fn get_metadata(
         return None;
     }
 
-    info!("get_metadata on path {:?}", combined);
-    //std::thread::sleep(std::time::Duration::from_secs(5));
+   
     match std::fs::metadata(&combined) {
         Err(_) => None,
         Ok(meta) => {

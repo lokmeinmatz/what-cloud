@@ -1,6 +1,5 @@
 import { UserLogin, UserLoginResponse } from '@/business/nettypes'
 import { debugWindowProp } from '@/business/utils'
-import { settings } from 'nprogress'
 import { ref, watch, computed } from 'vue'
 import { Node } from '../business/fs'
 

@@ -7,11 +7,11 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rocket = "0.4.5"
+rocket = { git = "https://github.com/SergioBenitez/Rocket" }
 serde = "1.0"
 serde_json = "1.0"
 serde_derive = "1.0"
-rocket_cors = "0.5.1"
+rocket_cors = { git = "https://github.com/lawliet89/rocket_cors", branch = "master" }
 log = "0.4.11"
 simplelog = "0.8.0"
 rand = "0.7.3"
@@ -25,7 +25,8 @@ ringbuf = "0.2.2"
 lazy_static = "1.4.0"
 path-slash = "0.1.3"
 crossbeam = "0.7.3"
+tokio = { version = "*", features = ["sync"] }
 
 [dependencies.rocket_contrib]
-version = "0.4.5"
+git = "https://github.com/SergioBenitez/Rocket"
 features = ["json"]

@@ -11,7 +11,9 @@ use std::path::{Path, PathBuf};
 pub mod metadata;
 pub mod shared;
 pub mod zipwriter;
+pub mod upload;
 mod blocking_buf;
+mod async_buf;
 
 ///
 #[derive(Serialize, Debug)]
@@ -31,6 +33,7 @@ pub struct NetNode {
 pub struct NetFilePath(String);
 
 impl NetFilePath {
+    #[allow(dead_code)]
     pub fn from_path<P: AsRef<Path>>(path: P) -> Self {
         Self(path.as_ref().to_slash_lossy())
     }
@@ -85,8 +88,6 @@ impl<'v> FromFormValue<'v> for NetFilePath {
 
 #[derive(Responder, Debug)]
 pub enum NodeContentResponse {
-    #[response(status = 400)]
-    WrongDecoding(String),
     #[response(status = 404)]
     PathNotFound(String),
     #[response(status = 409)]
@@ -157,7 +158,6 @@ fn get_node(
     let mut children_folder: Option<Vec<String>> = None;
     let mut files: Option<Vec<String>> = None;
 
-    info!("get_node on path {:?}", combined);
     let is_dir = combined.is_dir();
 
     // collects either all components to an Vec<String> or skips the ones that are in the base_path for shared nodes
@@ -235,7 +235,7 @@ pub enum FileDownloadResponse {
     #[response(status = 200)]
     File(NamedFile),
     #[response(status = 200)]
-    Zip(Stream<blocking_buf::BlockingConsumer>),
+    Zip(Stream<async_buf::AsyncConsumer>),
     #[response(status = 401)]
     Unauthorized(()),
     #[response(status = 404)]
@@ -243,10 +243,7 @@ pub enum FileDownloadResponse {
 }
 
 #[get("/download/file?<path>&<token>", rank = 1)]
-pub fn download_file(path: NetFilePath, token: UserID) -> FileDownloadResponse {
-    info!("User {:?} requested download of {:?}", token, path);
-
-
+pub async fn download_file(path: NetFilePath, token: UserID) -> FileDownloadResponse {
 
     let abs_path = to_abs_data_path(&token, Borrow::<Path>::borrow(&path));
 
@@ -255,7 +252,7 @@ pub fn download_file(path: NetFilePath, token: UserID) -> FileDownloadResponse {
         let cons = zipwriter::new_zip_writer(abs_path).unwrap();
         FileDownloadResponse::Zip(Stream::chunked(cons, 4096))
     } else {
-        match NamedFile::open(&abs_path) {
+        match NamedFile::open(&abs_path).await {
             Ok(nf) => FileDownloadResponse::File(nf),
             Err(e) => {
                 warn!("Error while reading file {:?} : {:?}", abs_path, e);
@@ -266,14 +263,13 @@ pub fn download_file(path: NetFilePath, token: UserID) -> FileDownloadResponse {
 }
 
 #[get("/download/file?<path>&<shared_id>", rank = 2)]
-pub fn download_shared_file(mut path: NetFilePath, shared_id: &RawStr, db: State<SharedDatabase>) -> FileDownloadResponse {
-    info!("Shared download of {:?}", path);
+pub async fn download_shared_file(mut path: NetFilePath, shared_id: &RawStr, db: State<'_, SharedDatabase>) -> FileDownloadResponse {
 
     if let Some(se) = db.get_shared_entry(&shared_id) {
         
         path.add_prefix(&se.path);
         
-        download_file(path, se.user)
+        download_file(path, se.user).await
     } else {
         FileDownloadResponse::Unauthorized(())
     }
