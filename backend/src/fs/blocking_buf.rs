@@ -105,6 +105,7 @@ impl Read for BlockingConsumer {
     }
 }
 
+#[allow(dead_code)]
 pub fn split_blocking(rb: RingBuffer<u8>) -> (BlockingProducer, BlockingConsumer) {
     let (prod, cons) = rb.split();
 

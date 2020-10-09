@@ -4,15 +4,16 @@ Backend:
 
 Upload-Feature:
   Server:
-    ☐ Create endpoint for logged-in-upload
+    ✔ Create endpoint for logged-in-upload @done(20-10-09 17:35)
     ☐ Create endpoint for shared-upload
-    ☐ Add attibute to shared table if upload is allowed
-    ☐ Add method to store file to disk
-    ☐ Limit upload size?
+    ☐ Add attibute to shared table upload_max @started(20-10-09 17:43)
+    ☐ upload_limit should count for all uploads to this shared (count in db?)
+    ✔ Add method to store file to disk @done(20-10-09 17:35)
+    ✔ Limit upload size? @done(20-10-09 17:35)
   Client:
     ☐ Add drag and drop upload
-    ☐ Add file selector upload
-    ☐ MultiFile?
+    ✔ Add file selector upload @done(20-10-09 17:35)
+    ✔ MultiFile? @done(20-10-09 17:35)
     ☐ Add toggle to shared
 
 Archive:

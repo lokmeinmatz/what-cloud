@@ -16,7 +16,7 @@
       <h3 v-else>This folder doesn't exist 😥</h3>
     </main>
     <FileInfo v-model:file="nodeInfo"/>
-    <UploadButton id="upload" :folder="folder"/>
+    <UploadButton id="upload" v-if="folderIsNode && folder.isMyNode()" :folder="folder"/>
   </div>
 </template>
 <script lang="ts">
@@ -43,6 +43,10 @@ export default defineComponent({
     const folder = ref<'loading' |Node | null>('loading')
     const nodeInfo = ref<Node | null>(null)
     const mode = store.displayMode
+
+    const folderIsNode = computed(() => {
+      return folder.value instanceof Node
+    })
 
     const pathElements = computed<string[]>(() => {
       let r
@@ -100,7 +104,8 @@ export default defineComponent({
       nodeInfo,
       mode,
       updateFolder,
-      pathDisplayObj
+      pathDisplayObj,
+      folderIsNode
     }
   }
 })

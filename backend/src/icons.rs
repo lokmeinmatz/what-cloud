@@ -2,18 +2,38 @@ use rocket::response;
 use rocket::State;
 use rocket::http;
 use log::{info, warn};
-use std::collections::HashMap;
 use std::sync::RwLock;
+use std::collections::VecDeque;
 
-pub struct IconsCache(RwLock<HashMap<String, String>>);
+
+const MAX_ICONS_CACHED: usize = 128;
+
+/// LRU storage (ext, svg)
+pub struct IconsCache(RwLock<VecDeque<(String, String)>>);
 
 impl IconsCache {
     pub fn empty() -> Self {
-        IconsCache(RwLock::new(HashMap::new()))
+        IconsCache(RwLock::new(VecDeque::new()))
     }
 
     pub fn get(&self, ext: &str) -> Option<String> {
-        self.0.read().and_then(|hm| Ok(hm.get(ext).map(|svg| svg.clone()))).ok().flatten()
+        // load weak, upgrade, and clone the pointed to string
+        self.0.read().ok().and_then(|hm| 
+            hm.iter().find(|entry| entry.0 == ext).map(|(_, svg)| svg.clone())
+        )
+    }
+
+    pub fn insert_new(&self, ext: String, svg: String) {
+        // move svg into arc
+        let mut w_cache = self.0.write().unwrap();
+
+        // add into lookup
+        w_cache.push_front((ext, svg));
+
+        if w_cache.len() > MAX_ICONS_CACHED {
+            let (ext, _) = w_cache.pop_front().unwrap();
+            info!("Icon cache filled, removed {}", ext);
+        }
     }
 }
 
@@ -129,6 +149,12 @@ pub fn icons_get(mut ext: String, cache: State<IconsCache>)
         warn!("Error while writing svg: {:?}", e);
         return Err(rocket::response::status::NotFound(()));
     }
+
+    let s = String::from_utf8(res).unwrap();
+
+    // store in cache
+    cache.insert_new(ext, s.clone());
+
     
-    Ok(response::Content(http::ContentType::SVG, String::from_utf8(res).unwrap()))
+    Ok(response::Content(http::ContentType::SVG, s))
 }

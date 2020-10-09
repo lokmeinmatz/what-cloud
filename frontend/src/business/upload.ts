@@ -1,3 +1,4 @@
+import { store } from '@/store'
 import { reactive } from 'vue'
 import { pathArrayToString } from './fs'
 
@@ -20,6 +21,7 @@ export function uploadFiles(root: string[], files: FileList): UploadStatus {
             const url = `/api/upload?file_path=${encodeURIComponent(pathArrayToString([...root, file.name]))}`
             console.log('Uploading file to', url)
             xhr.open('POST', url, false)
+            xhr.setRequestHeader('Authorization', `Bearer ${store.user.value?.authToken}`)
             uploadStatus.currentFile = file.name
             xhr.send(file)
         }

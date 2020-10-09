@@ -34,7 +34,7 @@ impl Write for BlockingProducer {
         }
 
         let written = self.inner.write(b)?;
-        self.produced.take().map(|w| w.wake()); // wake consumer because dat was added
+        self.produced.store(self.produced.take().map(|w| {w.wake_by_ref(); w})); // wake consumer because dat was added
         Ok(written)
     }
     fn flush(&mut self) -> std::io::Result<()> {
@@ -42,6 +42,7 @@ impl Write for BlockingProducer {
         while !self.inner.is_empty() {
             self.wait_consumed.park();
             if !self.consumer_alive() && !self.inner.is_empty() {
+                // consumer died and did not read all data
                 return Err(std::io::Error::from(std::io::ErrorKind::WouldBlock));
             }
         }
@@ -110,9 +111,11 @@ impl rocket::tokio::io::AsyncRead for AsyncConsumer {
         // if no data currently is available to read, park until produced
         // also check if producer end is still alive to terminate if is dead
         if self.inner.is_empty() && self.producer_alive() {
-            self.consumed.unpark();
             // store waker so the BlockingProducer can call the waker if produced any data
+            // !!! importatnt !!!
+            // store the waker first, otherwise it may freeze?
             self.produced_waker.store(Some(ctx.waker().clone()));
+            self.consumed.unpark();
             return Poll::Pending;
         }
 

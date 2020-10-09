@@ -35,7 +35,6 @@ pub async fn post_upload(
     user_id: UserID,
     data: Data
 ) -> UploadResponse {
-    dbg!(1);
     handle_upload(file_path, user_id, data).await
 }
 
@@ -59,9 +58,9 @@ async fn handle_upload(
         }
     }
     root.push(Borrow::<str>::borrow(&folder_path));
-    if !root.exists() {
+    if root.exists() {
         // check if user has allready folder or needs to get created
-        return Err(status::Forbidden(None))
+        info!("User overwriting existing file");
     }
     info!("Streaing to file {:?}", root);
     // stream file to root
