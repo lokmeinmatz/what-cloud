@@ -65,7 +65,7 @@ impl<'v> FromFormValue<'v> for UserID {
     type Error = ();
 
     fn from_form_value(token: &'v RawStr) -> Result<UserID, ()> {
-        dbg!(token);
+        //dbg!(token);
         if token.len() == crate::auth::AUTH_TOKEN_LEN {
 
             let token_storage = token_storage();

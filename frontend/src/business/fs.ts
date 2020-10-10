@@ -169,6 +169,14 @@ export class Node {
         return true
     }
 
+    async forceDelete() {
+        const res = await store.fetchWithAuth(`/api/node?path=${this.path()}`, {method: 'DELETE'})
+        if (res?.status == 202 && this.parent != undefined) {
+            this.parent.fetched = false
+            await this.parent.fetch()
+        }
+    }
+
     isMyNode(): boolean {
         return this.ownedBy == store.user.value?.userId
     }

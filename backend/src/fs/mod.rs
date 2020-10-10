@@ -1,9 +1,8 @@
-use rocket::http::RawStr;
+
 use crate::auth::UserID;
 use log::{info, warn};
-use path_slash::PathExt;
-use rocket::request::FromFormValue;
-use rocket::response::{NamedFile, Responder};
+
+use rocket::response::{Responder};
 use rocket_contrib::json::Json;
 use std::borrow::Borrow;
 use std::path::{Path, PathBuf};
@@ -12,8 +11,12 @@ pub mod metadata;
 pub mod shared;
 pub mod zipwriter;
 pub mod upload;
+pub mod download;
+pub mod netfilepath;
 mod blocking_buf;
 mod async_buf;
+
+use netfilepath::NetFilePath;
 
 ///
 #[derive(Serialize, Debug)]
@@ -29,63 +32,6 @@ pub struct NetNode {
     owned_by: UserID,
 }
 
-#[derive(Debug)]
-pub struct NetFilePath(String);
-
-impl NetFilePath {
-    #[allow(dead_code)]
-    pub fn from_path<P: AsRef<Path>>(path: P) -> Self {
-        Self(path.as_ref().to_slash_lossy())
-    }
-
-    pub fn add_prefix<P: AsRef<Path>>(&mut self, prefix: P) {
-        let mut n_base: String = prefix.as_ref().to_slash_lossy();
-        if n_base.ends_with('/') && self.0.starts_with('/') {
-            n_base.push_str(&self.0[1..]);
-        } else if n_base.ends_with('/') || self.0.starts_with('/') {
-            n_base.push_str(&self.0);
-        } else if self.0.len() > 0 {
-            n_base.push('/');
-            n_base.push_str(&self.0);
-        }
-        self.0 = n_base;
-    }
-}
-
-impl Borrow<str> for NetFilePath {
-    fn borrow(&self) -> &str {
-        &self.0
-    }
-}
-
-impl Borrow<Path> for NetFilePath {
-    fn borrow(&self) -> &Path {
-        &Path::new(&self.0)
-    }
-}
-
-impl<'v> FromFormValue<'v> for NetFilePath {
-    type Error = ();
-    fn from_form_value(raw: &'v rocket::http::RawStr) -> Result<Self, Self::Error> {
-        dbg!(raw);
-        let mut raw_path: String = match raw.percent_decode() {
-            Ok(s) => s.into_owned(),
-            Err(_) => {
-                return Err(());
-            }
-        };
-
-        if raw_path.contains("..") {
-            // illegal
-            // TODO are there other symbolic links or ways to escape the dir?
-            return Err(());
-        };
-        if raw_path.starts_with('/') {
-            raw_path.remove(0);
-        }
-        Ok(NetFilePath(Path::new(&raw_path).to_slash_lossy()))
-    }
-}
 
 #[derive(Responder, Debug)]
 pub enum NodeContentResponse {
@@ -230,62 +176,34 @@ fn get_node(
     }))
 }
 
-use rocket::response::Stream;
-#[derive(Responder)]
-pub enum FileDownloadResponse {
-    #[response(status = 200)]
-    File(NamedFile),
-    #[response(status = 200)]
-    Zip(Stream<async_buf::AsyncConsumer>),
-    #[response(status = 401)]
-    Unauthorized(()),
-    #[response(status = 404)]
-    NotFound(()),
-}
 
-#[get("/download/file?<path>&<token>", rank = 1)]
-pub async fn download_file(path: NetFilePath, token: UserID) -> FileDownloadResponse {
+use rocket::response::status;
+#[delete("/node?<path>")]
+pub async fn delete_node_data(
+    path: NetFilePath,
+    user_id: UserID,
+    addr: std::net::SocketAddr
+) -> Result<status::Accepted<()>, status::Forbidden<()>> {
+    let mut root: PathBuf = PathBuf::from(crate::config::data_path());
+    root.push(&user_id.0);
+    root.push(Borrow::<str>::borrow(&path));
+    
+    if !root.exists() {
+        warn!("User tried to delete {:?} which doesn't exist", &root);
+        return Err(status::Forbidden(None));
+    }
 
-    let abs_path = to_abs_data_path(&token, Borrow::<Path>::borrow(&path));
-
-    if abs_path.is_dir() {
-        // handle zip file
-        let cons = zipwriter::new_zip_writer(abs_path).unwrap();
-        FileDownloadResponse::Zip(Stream::chunked(cons, 4096))
+    info!("IP {:?} deletes {:?}", addr, &path);
+    if root.is_file() {
+        // delete file
+        if let Err(_) = std::fs::remove_file(&root) {
+            return Err(status::Forbidden(None));
+        }
     } else {
-        match NamedFile::open(&abs_path).await {
-            Ok(nf) => FileDownloadResponse::File(nf),
-            Err(e) => {
-                warn!("Error while reading file {:?} : {:?}", abs_path, e);
-                FileDownloadResponse::NotFound(())
-            }
+        // delete folder and all its children
+        if let Err(_) = std::fs::remove_dir_all(&root) {
+            return Err(status::Forbidden(None));
         }
     }
-}
-
-#[get("/download/file?<path>&<shared_id>", rank = 2)]
-pub async fn download_shared_file(mut path: NetFilePath, shared_id: &RawStr, db: State<'_, SharedDatabase>) -> FileDownloadResponse {
-
-    if let Some(se) = db.get_shared_entry(&shared_id) {
-        
-        path.add_prefix(&se.path);
-        
-        download_file(path, se.user).await
-    } else {
-        FileDownloadResponse::Unauthorized(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    // Note this useful idiom: importing names from outer (for mod tests) scope.
-    use super::*;
-
-    #[test]
-    fn test_netfilepath() {
-        let mut nfp = NetFilePath::from_path("/folder1/test");
-        assert_eq!(Borrow::<str>::borrow(&nfp), "/folder1/test");
-        nfp.add_prefix("\\User1\\");
-        assert_eq!(Borrow::<str>::borrow(&nfp), "/User1/folder1/test");
-    }
+    Ok(status::Accepted(None))
 }
