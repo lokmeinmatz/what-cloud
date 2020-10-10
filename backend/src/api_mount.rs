@@ -12,6 +12,7 @@ pub fn mount_api() -> Vec<Route> {
         crate::fs::shared::get_my_shared,
         crate::fs::upload::post_upload,
         crate::fs::upload::post_upload_shared,
+        crate::fs::upload::post_create_folder,
         crate::icons::icons_get,
         crate::auth::my_user,
         crate::auth::my_user_not_loggedin,

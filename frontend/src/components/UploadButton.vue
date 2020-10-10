@@ -33,7 +33,7 @@ export default defineComponent({
   background-color: var(--primary);
   width: 3em;
   height: 3em;
-  padding: 0.2em;
+  padding: 0.4em;
   color: white;
 }
 

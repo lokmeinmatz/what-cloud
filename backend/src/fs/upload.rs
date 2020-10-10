@@ -11,6 +11,7 @@ use rocket::State;
 
 type UploadResponse = Result<status::Accepted<()>, status::Forbidden<()>>;
 
+#[allow(unreachable_code, unused_variables)]
 #[post("/upload?<file_path>&<shared_id>", data = "<data>", rank = 1)]
 pub async fn post_upload_shared(
     mut file_path: NetFilePath,
@@ -18,6 +19,8 @@ pub async fn post_upload_shared(
     shared_id: String,
     data: Data
 ) -> UploadResponse {
+    warn!("Upload for shared not implemented");
+    return Err(status::Forbidden(None));
     // check if shared id is allowed
     if let Some(se) = db.get_shared_entry(&shared_id) {
         file_path.add_prefix(&se.path);
@@ -38,6 +41,37 @@ pub async fn post_upload(
     handle_upload(file_path, user_id, data).await
 }
 
+
+#[post("/create_folder?<folder_path>")]
+pub async fn post_create_folder(
+    folder_path: NetFilePath,
+    user_id: UserID
+) -> UploadResponse {
+    let mut root: PathBuf = PathBuf::from(crate::config::data_path());
+    root.push(&user_id.0);
+    if !root.exists() {
+        match std::fs::create_dir(&root) {
+            Ok(()) => info!("Created base dir of user {}", user_id.0),
+            Err(e) => {
+                warn!("Failed to create base dir of user {}: {:?}", user_id.0, e);
+                return Err(status::Forbidden(None))
+            },
+        }
+    }
+    root.push(Borrow::<str>::borrow(&folder_path));
+    if root.exists() {
+        // check if user has allready folder or needs to get created
+        warn!("User tried to create existin folder");
+        return Err(status::Forbidden(None));
+    }
+
+    if let Err(e) = std::fs::create_dir_all(&root) {
+        warn!("Error while creating folder: {:?}", e);
+        return Err(status::Forbidden(None));
+    }
+    Ok(status::Accepted(None))
+}
+
 use rocket::data::ToByteUnit;
 
 async fn handle_upload(
@@ -47,7 +81,6 @@ async fn handle_upload(
 ) -> UploadResponse {
     let mut root: PathBuf = PathBuf::from(crate::config::data_path());
     root.push(&user_id.0);
-    dbg!(&root);
     if !root.exists() {
         match std::fs::create_dir(&root) {
             Ok(()) => info!("Created base dir of user {}", user_id.0),

@@ -101,6 +101,15 @@ class Store {
         }
     }
 
+    // returns null if is not logged in, else fetch
+    async fetchWithAuth(url: string, req?: RequestInit): Promise<Response | null> {
+        if (this.user.value == null) return null
+        req = req || {}
+        if (req.headers == undefined) req.headers = {};
+        (req.headers! as any)['Authorization'] = `Bearer ${this.user.value?.authToken}`
+        return fetch(url, req)
+    }
+
     displayMode = ref<DisplayMode>(new DisplayMode(DisplayModeType.Files))
     rootNode = ref<Node | null>(null)
     baseUrl = location.protocol + '//' + location.host

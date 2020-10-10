@@ -49,11 +49,8 @@ export class Node {
         console.log(`Node ${this.path()} not loaded, fetching via ${url}`)
         let res
         try {
-            res = await fetch(url, {
-                headers: {
-                    'Authorization': `Bearer ${store.user.value?.authToken}`
-                }
-            })
+            res = await store.fetchWithAuth(url)
+            if (res == null) return err('Not logged in')
         }
         catch (e) {
             console.error(e)
@@ -194,6 +191,31 @@ export class Folder extends Node {
         // a child size changed, calculate new size and call this on parent if existing
         this.size = this.children?.reduce((acc, node) => acc + Math.max(node.size, 0), 0) || 0
         console.log(this, this.size)
+    }
+    
+    async createChildFolder(name: string): Promise<boolean> {
+
+        if (name.length == 0 || this.children?.find(c => c.name == name) != undefined) {
+            console.warn('Folder / File with this name allready exists')
+            return false
+        } 
+
+        const fullPath = `/${[...this.pathFromRoot, name].join('/')}`
+        console.log('Creating folder ', fullPath)
+
+        try {
+            const res = await store.fetchWithAuth(`/api/create_folder?folder_path=${encodeURIComponent(fullPath)}`, {method: 'POST'})
+            if (res?.status == 202) {
+                // ACCEPTED
+                this.fetched = false
+                await this.fetch()
+                return true
+            } 
+        } catch (error) {
+            console.error(error)
+            return false
+        }
+        return false
     }
 }
 

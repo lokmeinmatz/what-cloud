@@ -67,6 +67,7 @@ impl Borrow<Path> for NetFilePath {
 impl<'v> FromFormValue<'v> for NetFilePath {
     type Error = ();
     fn from_form_value(raw: &'v rocket::http::RawStr) -> Result<Self, Self::Error> {
+        dbg!(raw);
         let mut raw_path: String = match raw.percent_decode() {
             Ok(s) => s.into_owned(),
             Err(_) => {
