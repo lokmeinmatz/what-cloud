@@ -46,7 +46,7 @@ export class Node {
         if (store.displayMode.value?.mode == DisplayModeType.Files) url = `/api/node?file_path=${encodeURIComponent(this.path())}`
         else if (store.displayMode.value?.sharedId != undefined) url = `/api/node?file_path=${encodeURIComponent(this.path())}&shared_id=${store.displayMode.value?.sharedId}`
         else return err('neither owned node or shared with id in storage.displayMode')
-        console.log(`Node ${this.path()} not loaded, fetching via ${url}`)
+        console.log(`fetching ${url}`)
         let res
         try {
             res = await store.fetchWithAuth(url)
@@ -60,7 +60,7 @@ export class Node {
         if (res.ok) {
             //console.log('res ok')
             const snode: NetNode = await res.json()
-            console.log('fetched val:', snode)
+            //console.log('fetched val:', snode)
             if (this.pathFromRoot.length > 0 && this.name != snode.name) {
                 console.error('fetched name != local name')
                 return err('Wrong Node name')

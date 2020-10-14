@@ -113,6 +113,7 @@ export default defineComponent({
             return
           }
       await props.file?.forceDelete()
+      emit('update:file', null)
     }
 
 

@@ -20,7 +20,7 @@
 
 
 <script lang="ts">
-import { defineComponent, PropType, ref, watch } from "vue";
+import { defineComponent, PropType, ref } from "vue";
 import { Folder } from "../business/fs";
 import StringInsertModal from "./StringInsertModal.vue";
 
@@ -34,10 +34,6 @@ export default defineComponent({
   },
   setup(props) {
     const folderNameModal = ref<typeof StringInsertModal | null>(null)
-
-    watch(folderNameModal, n => {
-      console.log(n)
-    })
 
     return {
       folderNameModal,

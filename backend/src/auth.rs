@@ -99,7 +99,9 @@ fn hash_pw(password: &str) -> String {
     let mut hasher = sha3::Sha3_256::new();
     hasher.update(password.as_bytes());
     let mut res = String::with_capacity(64);
+
     for e in hasher.finalize().iter() {
+        
         res.push(quad_to_char(*e >> 4));
         res.push(quad_to_char(*e & 0x0f));
     }

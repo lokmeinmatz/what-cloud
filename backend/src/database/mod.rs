@@ -111,17 +111,19 @@ impl SharedDatabase {
                 Some(id) => id,
                 None => {
                     // generate new unique id
-                    loop {
+                    let mut id = None;
+                    for _ in 0..100 {
                         let share_id: String = crate::token_validizer::get_rand_token::<16>().iter().map(|e| *e as char).collect(); 
                         if let Ok(false) = conn.query_row(
                             "SELECT EXISITS(SELECT 1 FROM SHARED WHERE ID = ?)", 
                             &[&share_id], |r| r.get::<usize, u32>(0).map(|e| e == 1)) {
                             // shared id doesn't exist
-                            break SharedID::from_string_unchecked(share_id)
+                            id = Some(SharedID::from_string_unchecked(share_id));
                         } else {
                             warn!("Generated existing shared id, retry...");
                         }
                     }
+                    id?
                 }
             };
 
