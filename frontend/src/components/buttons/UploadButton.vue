@@ -52,8 +52,8 @@
 
 <script lang="ts">
 import { defineComponent, reactive, ref } from "vue";
-import { Folder, Node } from "../business/fs";
-import { uploadFiles, UploadStatus, waitForFinish } from "../business/upload";
+import { Folder, Node } from "@/business/fs";
+import { uploadFiles, UploadStatus, waitForFinish } from "@/business/upload";
 
 export default defineComponent({
   name: "UploadButton",

@@ -7,7 +7,7 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue'
-import { Node } from '../business/fs'
+import { Node } from '@/business/fs'
 
 export default defineComponent({
   name: 'DownloadButton',

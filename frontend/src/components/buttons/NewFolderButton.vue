@@ -21,8 +21,8 @@
 
 <script lang="ts">
 import { defineComponent, PropType, ref } from "vue";
-import { Folder } from "../business/fs";
-import StringInsertModal from "./StringInsertModal.vue";
+import { Folder } from "@/business/fs";
+import StringInsertModal from "../StringInsertModal.vue";
 
 export default defineComponent({
   name: "NewFolderButton",

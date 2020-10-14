@@ -43,7 +43,7 @@
 import { defineComponent, PropType } from 'vue'
 import { Folder, Node } from "../business/fs";
 import { DisplayMode } from '../store';
-import DownloadButton from './DownloadButton.vue'
+import DownloadButton from './buttons/DownloadButton.vue'
 
 export default defineComponent({
   name: "PathDisplay",

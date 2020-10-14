@@ -1,6 +1,6 @@
 use rusqlite::{Connection, params, Row, ToSql};
 use std::sync::{Mutex, MutexGuard};
-use log::{info, trace, warn};
+use log::{info, trace, warn, error};
 use std::convert::{TryFrom, TryInto};
 use std::path::{Path, PathBuf};
 use crate::auth::UserID;
@@ -101,29 +101,35 @@ impl SharedDatabase {
     pub fn update_share(&self, user_id: &UserID, path: &std::path::Path, enabled: bool, mut upload_limit: Option<u32>) -> Option<SharedID> {
         let conn = self.conn();
         let path_str = path.to_str().unwrap();
+        let mut shared_id: Option<SharedID> = None;
+
         if enabled {
 
             // first check if share allready exists
-            let id: SharedID = match conn.query_row(
+            shared_id = match conn.query_row(
                 "SELECT ID FROM SHARED WHERE USER = ? AND BASE_PATH = ?",
                 params![&user_id.0, path_str],
             |row| row.get(0).map(|s| SharedID::from_string_unchecked(s))).ok() {
-                Some(id) => id,
+                Some(id) => Some(id),
                 None => {
                     // generate new unique id
                     let mut id = None;
                     for _ in 0..100 {
                         let share_id: String = crate::token_validizer::get_rand_token::<16>().iter().map(|e| *e as char).collect(); 
-                        if let Ok(false) = conn.query_row(
-                            "SELECT EXISITS(SELECT 1 FROM SHARED WHERE ID = ?)", 
+                        println!("Generated share id {}", share_id);
+                        match conn.query_row(
+                            "SELECT EXISTS(SELECT 1 FROM SHARED WHERE ID = ?)", 
                             &[&share_id], |r| r.get::<usize, u32>(0).map(|e| e == 1)) {
-                            // shared id doesn't exist
-                            id = Some(SharedID::from_string_unchecked(share_id));
-                        } else {
-                            warn!("Generated existing shared id, retry...");
+                                Ok(false) => {
+                                    // shared id doesn't exist
+                                    id = Some(SharedID::from_string_unchecked(share_id));
+                                    break;
+                                },
+                                Ok(true) => warn!("Generated existing shared id, retry..."),
+                                Err(e) => {error!("{:?}", e); break;}
                         }
                     }
-                    id?
+                    id
                 }
             };
 
@@ -131,21 +137,24 @@ impl SharedDatabase {
                 upload_limit = None;
             }
 
-            // very unperformant
-            let upload_limit: Box<dyn ToSql> = upload_limit.map(|ul| Box::new(ul) as Box<dyn ToSql>).unwrap_or_else(|| Box::new(rusqlite::types::Null));
-
-
+            dbg!(&shared_id);
+            
             // no share exists, create new
             // TODO check if share id allready exisits?
-
-            conn.execute(
-                "INSERT OR REPLACE INTO SHARED (ID, USER, BASE_PATH, CREATED_AT, UPLOAD_LIMIT) VALUES (?, ?, ?, datetime('now'))", 
-                params![id.as_ref(), &user_id.0, path_str, upload_limit]).ok()?;
-            Some(id)
-        } else {
-
-            conn.execute("DELETE FROM SHARED WHERE BASE_PATH = ?", params![path_str]).ok();
-            None
+        }
+        match shared_id {
+            Some(id) => {
+                // very unperformant
+                let upload_limit: Box<dyn ToSql> = upload_limit.map(|ul| Box::new(ul) as Box<dyn ToSql>).unwrap_or_else(|| Box::new(rusqlite::types::Null));
+                conn.execute(
+                    "INSERT OR REPLACE INTO SHARED (ID, USER, BASE_PATH, CREATED_AT, UPLOAD_LIMIT) VALUES (?, ?, ?, datetime('now'), ?)", 
+                    params![id.as_ref(), &user_id.0, path_str, upload_limit]).map_err(|e| error!("{:?}", e)).ok()?;
+                Some(id)
+            },
+            None => {
+                conn.execute("DELETE FROM SHARED WHERE BASE_PATH = ?", params![path_str]).ok();
+                None
+            }
         }
     }
 }
