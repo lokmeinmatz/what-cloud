@@ -97,9 +97,9 @@ fn quad_to_char(b: u8) -> char {
     (b + 0x57) as char
 }
 
-fn hash_pw(password: &str) -> String {
+pub fn hash_str_to_hex(strng: &str) -> String {
     let mut hasher = sha3::Sha3_256::new();
-    hasher.update(password.as_bytes());
+    hasher.update(strng.as_bytes());
     let mut res = String::with_capacity(64);
     for e in hasher.finalize().iter() {
         res.push(quad_to_char(*e >> 4));
@@ -116,7 +116,7 @@ pub fn login(mut login_data: Json<UserLogin>,
              db: State<SharedDatabase>)
     -> Result<Json<UserLoginResponse>, status::Unauthorized<&'static str>> {
 
-        let hashed_pw = hash_pw(login_data.password_base64.as_str());
+        let hashed_pw = hash_str_to_hex(login_data.password_base64.as_str());
         //println!("{}", hashed_pw);
         if let Some(user) = db.get_user(database::GetUserQuery::ByName(&login_data.name)) {
             if user.hashed_pw == hashed_pw {
