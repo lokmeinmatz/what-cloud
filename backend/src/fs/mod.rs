@@ -13,7 +13,6 @@ pub mod download;
 pub mod zipwriter;
 pub mod previews;
 pub mod upload;
-pub mod download;
 pub mod netfilepath;
 mod blocking_buf;
 mod async_buf;
