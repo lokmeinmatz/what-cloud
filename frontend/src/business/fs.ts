@@ -46,14 +46,11 @@ export class Node {
         if (store.displayMode.value?.mode == DisplayModeType.Files) url = `/api/node?file_path=${encodeURIComponent(this.path())}`
         else if (store.displayMode.value?.sharedId != undefined) url = `/api/node?file_path=${encodeURIComponent(this.path())}&shared_id=${store.displayMode.value?.sharedId}`
         else return err('neither owned node or shared with id in storage.displayMode')
-        console.log(`Node ${this.path()} not loaded, fetching via ${url}`)
+        console.log(`fetching ${url}`)
         let res
         try {
-            res = await fetch(url, {
-                headers: {
-                    'Authorization': `Bearer ${store.user.value?.authToken}`
-                }
-            })
+            res = await store.fetchWithAuth(url)
+            if (res == null) return err('Not logged in')
         }
         catch (e) {
             console.error(e)
@@ -63,7 +60,7 @@ export class Node {
         if (res.ok) {
             //console.log('res ok')
             const snode: NetNode = await res.json()
-            console.log('fetched val:', snode)
+            //console.log('fetched val:', snode)
             if (this.pathFromRoot.length > 0 && this.name != snode.name) {
                 console.error('fetched name != local name')
                 return err('Wrong Node name')
@@ -171,6 +168,18 @@ export class Node {
         else this.shared = id
         return true
     }
+
+    async forceDelete() {
+        const res = await store.fetchWithAuth(`/api/node?path=${this.path()}`, {method: 'DELETE'})
+        if (res?.status == 202 && this.parent != undefined) {
+            this.parent.fetched = false
+            await this.parent.fetch()
+        }
+    }
+
+    isMyNode(): boolean {
+        return this.ownedBy == store.user.value?.userId
+    }
 }
 
 
@@ -190,6 +199,31 @@ export class Folder extends Node {
         // a child size changed, calculate new size and call this on parent if existing
         this.size = this.children?.reduce((acc, node) => acc + Math.max(node.size, 0), 0) || 0
         console.log(this, this.size)
+    }
+    
+    async createChildFolder(name: string): Promise<boolean> {
+
+        if (name.length == 0 || this.children?.find(c => c.name == name) != undefined) {
+            console.warn('Folder / File with this name allready exists')
+            return false
+        } 
+
+        const fullPath = `/${[...this.pathFromRoot, name].join('/')}`
+        console.log('Creating folder ', fullPath)
+
+        try {
+            const res = await store.fetchWithAuth(`/api/create_folder?folder_path=${encodeURIComponent(fullPath)}`, {method: 'POST'})
+            if (res?.status == 202) {
+                // ACCEPTED
+                this.fetched = false
+                await this.fetch()
+                return true
+            } 
+        } catch (error) {
+            console.error(error)
+            return false
+        }
+        return false
     }
 }
 

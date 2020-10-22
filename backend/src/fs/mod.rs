@@ -12,7 +12,13 @@ pub mod shared;
 pub mod download;
 pub mod zipwriter;
 pub mod previews;
+pub mod upload;
+pub mod download;
+pub mod netfilepath;
 mod blocking_buf;
+mod async_buf;
+
+use netfilepath::NetFilePath;
 
 ///
 #[derive(Serialize, Debug)]
@@ -28,66 +34,9 @@ pub struct NetNode {
     owned_by: UserID,
 }
 
-#[derive(Debug)]
-pub struct NetFilePath(String);
-
-impl NetFilePath {
-    pub fn from_path<P: AsRef<Path>>(path: P) -> Self {
-        Self(path.as_ref().to_slash_lossy())
-    }
-
-    pub fn add_prefix<P: AsRef<Path>>(&mut self, prefix: P) {
-        let mut n_base: String = prefix.as_ref().to_slash_lossy();
-        if n_base.ends_with('/') && self.0.starts_with('/') {
-            n_base.push_str(&self.0[1..]);
-        } else if n_base.ends_with('/') || self.0.starts_with('/') {
-            n_base.push_str(&self.0);
-        } else if self.0.len() > 0 {
-            n_base.push('/');
-            n_base.push_str(&self.0);
-        }
-        self.0 = n_base;
-    }
-}
-
-impl Borrow<str> for NetFilePath {
-    fn borrow(&self) -> &str {
-        &self.0
-    }
-}
-
-impl Borrow<Path> for NetFilePath {
-    fn borrow(&self) -> &Path {
-        &Path::new(&self.0)
-    }
-}
-
-impl<'v> FromFormValue<'v> for NetFilePath {
-    type Error = ();
-    fn from_form_value(raw: &'v rocket::http::RawStr) -> Result<Self, Self::Error> {
-        let mut raw_path: String = match raw.percent_decode() {
-            Ok(s) => s.into_owned(),
-            Err(_) => {
-                return Err(());
-            }
-        };
-
-        if raw_path.contains("..") {
-            // illegal
-            // TODO are there other symbolic links or ways to escape the dir?
-            return Err(());
-        };
-        if raw_path.starts_with('/') {
-            raw_path.remove(0);
-        }
-        Ok(NetFilePath(Path::new(&raw_path).to_slash_lossy()))
-    }
-}
 
 #[derive(Responder, Debug)]
 pub enum NodeContentResponse {
-    #[response(status = 400)]
-    WrongDecoding(String),
     #[response(status = 404)]
     PathNotFound(String),
     #[response(status = 409)]
@@ -158,7 +107,6 @@ fn get_node(
     let mut children_folder: Option<Vec<String>> = None;
     let mut files: Option<Vec<String>> = None;
 
-    info!("get_node on path {:?}", combined);
     let is_dir = combined.is_dir();
 
     // collects either all components to an Vec<String> or skips the ones that are in the base_path for shared nodes
@@ -231,16 +179,33 @@ fn get_node(
 }
 
 
-#[cfg(test)]
-mod tests {
-    // Note this useful idiom: importing names from outer (for mod tests) scope.
-    use super::*;
-
-    #[test]
-    fn test_netfilepath() {
-        let mut nfp = NetFilePath::from_path("/folder1/test");
-        assert_eq!(Borrow::<str>::borrow(&nfp), "/folder1/test");
-        nfp.add_prefix("\\User1\\");
-        assert_eq!(Borrow::<str>::borrow(&nfp), "/User1/folder1/test");
+use rocket::response::status;
+#[delete("/node?<path>")]
+pub async fn delete_node_data(
+    path: NetFilePath,
+    user_id: UserID,
+    addr: std::net::SocketAddr
+) -> Result<status::Accepted<()>, status::Forbidden<()>> {
+    let mut root: PathBuf = PathBuf::from(crate::config::data_path());
+    root.push(&user_id.0);
+    root.push(Borrow::<str>::borrow(&path));
+    
+    if !root.exists() {
+        warn!("User tried to delete {:?} which doesn't exist", &root);
+        return Err(status::Forbidden(None));
     }
+
+    info!("IP {:?} deletes {:?}", addr, &path);
+    if root.is_file() {
+        // delete file
+        if let Err(_) = std::fs::remove_file(&root) {
+            return Err(status::Forbidden(None));
+        }
+    } else {
+        // delete folder and all its children
+        if let Err(_) = std::fs::remove_dir_all(&root) {
+            return Err(status::Forbidden(None));
+        }
+    }
+    Ok(status::Accepted(None))
 }

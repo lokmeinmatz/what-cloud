@@ -74,6 +74,7 @@
               </tr>
             </tbody>
           </table>
+          <button class="btn btn-danger" @click="deleteNode">Delete</button>
         </div>
       </aside>
     </div>
@@ -105,6 +106,14 @@ export default defineComponent({
       (window as any).$(copiedToast.value).toast({delay: 2000});
       (window as any).$(copiedToast.value).toast('show');
       /* eslint-enable @typescript-eslint/no-explicit-any */
+    }
+
+    async function deleteNode() {
+      if (!confirm(`Are you shure you want to remove this ${props.file?.type}?`)) {
+            return
+          }
+      await props.file?.forceDelete()
+      emit('update:file', null)
     }
 
 
@@ -164,6 +173,7 @@ export default defineComponent({
       copiedToast,
       sharedLink,
       copyShared,
+      deleteNode,
       nodeCanGetShared
     };
   }

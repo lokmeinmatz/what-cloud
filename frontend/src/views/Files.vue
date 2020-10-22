@@ -16,6 +16,10 @@
       <h3 v-else>This folder doesn't exist 😥</h3>
     </main>
     <FileInfo v-model:file="nodeInfo"/>
+    <div id="add-content" class="btn-group" v-if="folderIsNode && folder.isMyNode()">
+      <UploadButton :folder="folder"/>
+      <NewFolderButton :folder="folder"/>
+    </div>
   </div>
 </template>
 <script lang="ts">
@@ -24,6 +28,8 @@ import { computed, defineComponent, ref, watch } from 'vue'
 import FileList from '../components/FileList.vue'
 import PathDisplay from '../components/PathDisplay.vue'
 import FileInfo from '../components/FileInfo.vue'
+import UploadButton from '../components/buttons/UploadButton.vue'
+import NewFolderButton from '../components/buttons/NewFolderButton.vue'
 import { DisplayModeType, store } from '../store'
 import { getNode, GetNodeError, Node } from '../business/fs'
 import router from '../router'
@@ -34,12 +40,18 @@ export default defineComponent({
   components: {
     FileList,
     PathDisplay,
-    FileInfo
+    FileInfo,
+    UploadButton,
+    NewFolderButton
   },
   setup() {
     const folder = ref<'loading' |Node | null>('loading')
     const nodeInfo = ref<Node | null>(null)
     const mode = store.displayMode
+
+    const folderIsNode = computed(() => {
+      return folder.value instanceof Node
+    })
 
     const pathElements = computed<string[]>(() => {
       let r
@@ -97,7 +109,8 @@ export default defineComponent({
       nodeInfo,
       mode,
       updateFolder,
-      pathDisplayObj
+      pathDisplayObj,
+      folderIsNode
     }
   }
 })
@@ -114,6 +127,13 @@ export default defineComponent({
   align-content: stretch;
   overflow-x: hidden;
   transition: grid-template-columns ease-out 0.3s;
+}
+
+#add-content {
+  position: fixed;
+  right: 1em;
+  bottom: 1em;
+
 }
 
 #files.display-node-info {

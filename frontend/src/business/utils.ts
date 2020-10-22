@@ -45,6 +45,7 @@ export function randString(length: number): string {
 } 
 
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export function debugWindowProp(name: string, data: any) {
     console.warn(`updated debug window property '${name}'`);
     (window as any)[name] = data

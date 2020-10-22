@@ -1,13 +1,13 @@
-use std::path::Path;
-use std::borrow::Borrow;
-use crate::fs::NetFilePath;
 use crate::auth::UserID;
 use crate::database::SharedDatabase;
+use crate::fs::NetFilePath;
 use log::info;
 use rocket::State;
 use rocket_contrib::json::Json;
+use std::borrow::Borrow;
+use std::path::Path;
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct SharedID(String);
 
 impl SharedID {
@@ -15,35 +15,53 @@ impl SharedID {
         Self(id)
     }
 
-    pub fn from_string_checked(id: String, db: &mut SharedDatabase) -> Option<Self> {
+    #[allow(dead_code)]
+    pub fn from_string_checked(id: String, db: &SharedDatabase) -> Option<Self> {
         if db.is_active_shared_id(&id) {
             Some(Self(id))
-        }
-        else {
+        } else {
             None
         }
     }
 }
 
+impl<'r> rocket::response::Responder<'r, 'static> for SharedID {
+    fn respond_to(
+        self,
+        req: &'r rocket::Request<'_>,
+    ) -> Result<rocket::Response<'static>, rocket::http::Status> {
+        self.0.respond_to(req)
+    }
+}
+
+impl std::convert::AsRef<str> for SharedID {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
 
 /// Set folders / files shared state
-#[patch("/folder/shared?<path>&<enabled>")]
+/// upload_limit in mb
+#[patch("/folder/shared?<path>&<enabled>&<upload_limit>")]
 pub fn update_folder_share(
     path: NetFilePath,
     enabled: bool,
+    upload_limit: Option<u32>,
     user_id: UserID,
     db: State<SharedDatabase>,
-) -> Result<String, ()> {
+) -> Result<SharedID, ()> {
     let combined: PathBuf = super::to_abs_data_path(&user_id, Borrow::<Path>::borrow(&path));
     if !combined.exists() || combined.is_file() {
         return Err(());
     }
     // create new share
-    let r = db.update_share(&user_id, Borrow::<Path>::borrow(&path), enabled);
-    info!(
-        "User {} set shared of {:?} to {:?}",
-        &user_id, &path, &r
+    let r = db.update_share(
+        &user_id,
+        Borrow::<Path>::borrow(&path),
+        enabled,
+        upload_limit,
     );
+    info!("User {} set shared of {:?} to {:?}", &user_id, &path, &r);
     r.ok_or(())
 }
 

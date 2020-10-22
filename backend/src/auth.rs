@@ -27,6 +27,8 @@ pub struct UserLoginResponse {
     user_id: UserID
 }
 
+
+/// Length == 8 !!!
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct UserID(pub String);
 
@@ -36,9 +38,10 @@ impl std::fmt::Display for UserID {
      }
 }
 
+#[rocket::async_trait]
 impl<'a, 'r> FromRequest<'a, 'r> for UserID {
     type Error = ();
-    fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
+    async fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
         use rocket::http::Status;
         let token_storage = token_storage();
 
@@ -46,9 +49,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for UserID {
             if token.starts_with("Bearer ") {
                 let auth_token = &token[7..];
 
-                if auth_token.len() == crate::auth::AUTH_TOKEN_LEN {
-                    //info!("auth token req: {}", auth_token);
-            
+                if auth_token.len() == crate::auth::AUTH_TOKEN_LEN {            
                     if let Some(ud) = token_storage.get_user_data(auth_token.as_bytes()) {
                         return Outcome::Success(ud.1.clone())
                     }
@@ -66,9 +67,8 @@ impl<'v> FromFormValue<'v> for UserID {
     type Error = ();
 
     fn from_form_value(token: &'v RawStr) -> Result<UserID, ()> {
-        
+        //dbg!(token);
         if token.len() == crate::auth::AUTH_TOKEN_LEN {
-            //info!("auth token req: {}", auth_token);
 
             let token_storage = token_storage();
             if let Some(ud) = token_storage.get_user_data(token.as_bytes()) {
@@ -101,7 +101,9 @@ pub fn hash_str_to_hex(strng: &str) -> String {
     let mut hasher = sha3::Sha3_256::new();
     hasher.update(strng.as_bytes());
     let mut res = String::with_capacity(64);
+
     for e in hasher.finalize().iter() {
+        
         res.push(quad_to_char(*e >> 4));
         res.push(quad_to_char(*e & 0x0f));
     }

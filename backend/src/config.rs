@@ -45,23 +45,24 @@ pub fn init() -> Result<(), &'static str> {
         }
 
         let m_db_path = std::env::var("DB_PATH");
-
+        
         if m_db_path.is_err() {
             warn!("DB_PATH not set, setting to default...");
         }
-
+        let icon_conf_path = std::env::var("ICON_CONF").unwrap_or("./icon-conf.json".into());
+        
         // load icon conf
         let mut icon_conf = HashMap::new();
 
-        match std::fs::read_to_string("./icon-conf.json") {
+        match std::fs::read_to_string(&icon_conf_path) {
             Ok(json) => {
                 match serde_json::from_str(&json) {
                     Ok(p) => icon_conf = p,
-                    Err(e) => warn!("Error while parsing icon-conf.json, ignoring file. {:?}", e)
+                    Err(e) => warn!("Error while parsing {}, ignoring file. {:?}", icon_conf_path, e)
                 }
             },
             Err(e) => {
-                warn!("Failed to load icon-conf.json, no settings loaded! {:?}", e);
+                warn!("Failed to load {}, no settings loaded! {:?}", icon_conf_path, e);
             }
         }
 

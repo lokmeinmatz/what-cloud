@@ -1,6 +1,5 @@
 import { UserLogin, UserLoginResponse } from '@/business/nettypes'
 import { debugWindowProp } from '@/business/utils'
-import { settings } from 'nprogress'
 import { ref, watch, computed } from 'vue'
 import { Node } from '../business/fs'
 
@@ -100,6 +99,15 @@ class Store {
             console.log(`error: ${error}`)
             throw error
         }
+    }
+
+    // returns null if is not logged in, else fetch
+    async fetchWithAuth(url: string, req?: RequestInit): Promise<Response | null> {
+        if (this.user.value == null) return null
+        req = req || {}
+        if (req.headers == undefined) req.headers = {};
+        (req.headers! as any)['Authorization'] = `Bearer ${this.user.value?.authToken}`
+        return fetch(url, req)
     }
 
     displayMode = ref<DisplayMode>(new DisplayMode(DisplayModeType.Files))
