@@ -27,6 +27,8 @@ pub struct UserLoginResponse {
     user_id: UserID
 }
 
+
+/// Length == 8 !!!
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct UserID(pub String);
 
