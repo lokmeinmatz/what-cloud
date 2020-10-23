@@ -14,7 +14,7 @@ type UploadResponse = Result<status::Accepted<()>, status::Forbidden<()>>;
 #[allow(unreachable_code, unused_variables)]
 #[post("/upload?<file_path>&<shared_id>", data = "<data>", rank = 1)]
 pub async fn post_upload_shared(
-    mut file_path: NetFilePath,
+    file_path: NetFilePath,
     db: State<'_, SharedDatabase>,
     shared_id: String,
     data: Data

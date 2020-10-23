@@ -6,6 +6,7 @@ pub fn mount_api() -> Vec<Route> {
         crate::auth::logout, 
         crate::fs::get_node_data_shared,
         crate::fs::get_node_data,
+        crate::fs::delete_node_data,
         crate::fs::download::download_file,
         crate::fs::download::download_shared_file,
         crate::fs::previews::preview_image,
