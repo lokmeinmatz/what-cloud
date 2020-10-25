@@ -22,30 +22,32 @@
       accept="*"
       @change="handleUpload"
     />
-    <div class="toast-container">
-      <!-- upload status toast -->
-      <div
-        class="toast bg-primary"
-        ref="uploadToast"
-        role="alert"
-        aria-live="assertive"
-        aria-atomic="true"
-      >
-        <div class="toast-header" v-if="uploadStatus != null">
-          <strong class="mr-auto"
-            >File Upload {{ uploadStatus.currentFileNum }}/{{
-              uploadStatus.totalFiles
-            }}</strong
-          >
-          <!--<small>11 mins ago</small>-->
-        </div>
-        <div class="toast-body" v-if="uploadStatus != null">
-          Uploading {{ uploadStatus.currentFile }} ({{
-            (uploadStatus.percent * 100).toFixed(1)
-          }}%)
+    <teleport to="body">
+      <div class="toast-container">
+        <!-- upload status toast -->
+        <div
+          class="toast bg-primary"
+          ref="uploadToast"
+          role="alert"
+          aria-live="assertive"
+          aria-atomic="true"
+        >
+          <div class="toast-header" v-if="uploadStatus != null">
+            <strong class="mr-auto"
+              >File Upload {{ uploadStatus.currentFileNum }}/{{
+                uploadStatus.totalFiles
+              }}</strong
+            >
+            <!--<small>11 mins ago</small>-->
+          </div>
+          <div class="toast-body" v-if="uploadStatus != null">
+            Uploading {{ uploadStatus.currentFile }} ({{
+              (uploadStatus.percent * 100).toFixed(1)
+            }}%)
+          </div>
         </div>
       </div>
-    </div>
+    </teleport>
   </button>
 </template>
 
@@ -132,10 +134,11 @@ export default defineComponent({
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: -1000;
+  z-index: 1;
 }
 
 .toast-header {
+  color: white;
   background-color: rgba(255, 255, 255, 0.2);
 }
 </style>

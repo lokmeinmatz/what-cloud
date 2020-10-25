@@ -1,34 +1,91 @@
 <template>
-  <div class="list-group">
-    <FSItem v-for="file in content" class="list-group-item" :key="file.name" :file="file" @nodeinfo-requested="$emit('nodeinfo-requested', $event)"/>
+  <div>
+    <div class="btn-group" id="display-style-selector" role="group">
+      <button
+        type="button"
+        class="btn"
+        :class="
+          displayStyle == 'list'
+            ? { 'btn-primary': true }
+            : { 'btn-secondary': true }
+        "
+        @click="displayStyle = 'list'"
+      >
+        List
+      </button>
+      <button
+        type="button"
+        class="btn"
+        :class="
+          displayStyle == 'previews'
+            ? { 'btn-primary': true }
+            : { 'btn-secondary': true }
+        "
+        @click="displayStyle = 'previews'"
+      >
+        Previews
+      </button>
+    </div>
+    <div :class="{'list-group': true, 'previews': displayStyle == 'previews'}">
+      <FSItem
+        v-for="file in content"
+        class="list-group-item"
+        :preview="displayStyle == 'previews'"
+        :key="file.name"
+        :file="file"
+        @nodeinfo-requested="$emit('nodeinfo-requested', $event)"
+      />
+    </div>
   </div>
 </template>
 
 
 <script lang="ts">
-import { defineComponent } from 'vue'
-import FSItem from './FSItem.vue'
-import { Folder, Node } from '../business/fs'
+import { computed, defineComponent, ref } from "vue";
+import FSItem from "./FSItem.vue";
+import { Folder, Node } from "../business/fs";
+
+enum DisplayStyle {
+  List = "list",
+  Previews = "previews",
+}
 
 export default defineComponent({
-  name: 'FileList',
-  components: {FSItem},
+  name: "FileList",
+  components: { FSItem },
   props: {
-    folder: Folder
+    folder: Folder,
   },
-  computed: {
-    content(): Node[] {
-      const c = (this.folder as Folder).children
-      if (c == undefined) return []
+  setup(props) {
+    const content = computed<Node[]>(() => {
+      const c = (props.folder as Folder).children;
+      if (c == undefined) return [];
       return c.sort((a, b) => {
-        if (a.type == 'folder' && b.type != 'folder') return -1 
-        if (a.type != 'folder' && b.type == 'folder') return 1
-        return a.name.localeCompare(b.name)
-      })
-    }
-  }
-})
+        if (a.type == "folder" && b.type != "folder") return -1;
+        if (a.type != "folder" && b.type == "folder") return 1;
+        return a.name.localeCompare(b.name);
+      });
+    });
+
+    const displayStyle = ref(DisplayStyle.List);
+
+    return {
+      content,
+      displayStyle,
+    };
+  },
+});
 </script>
 
-<style>
+<style scoped>
+#display-style-selector {
+  margin: 0.5em;
+}
+
+
+.previews {
+  flex-direction: row;
+  flex-wrap: wrap;
+  border: none;
+}
 </style>

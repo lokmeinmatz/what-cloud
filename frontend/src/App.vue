@@ -101,6 +101,10 @@ export default defineComponent({
   min-height: 100vh;
 }
 
+* {
+  box-sizing: border-box;
+}
+
 #app.dark {
   background-color: black;
 }

@@ -89,11 +89,10 @@ pub async fn preview_image(path: NetFilePath, token: UserID, resolution: Option<
         info!("Created preview cache folder at {:?}", &cache_dir);
     }
 
-    let hashed_path = hash_str_to_hex("");
+    let hashed_path = hash_str_to_hex(abs_path.to_str().unwrap());
 
     let cached_file_name = format!("{}_{}.jpg", res, &hashed_path[0..30]);
     
-    dbg!(&cached_file_name);
 
     cache_dir.push(cached_file_name);
     
