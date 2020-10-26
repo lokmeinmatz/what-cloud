@@ -133,7 +133,7 @@ export default defineComponent({
   position: fixed;
   right: 1em;
   bottom: 1em;
-
+  z-index: 3;
 }
 
 #files.display-node-info {

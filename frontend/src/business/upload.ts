@@ -62,6 +62,7 @@ export function uploadFiles(uploadStatus: UploadStatus, root: Folder, files: Fil
                 xhr.setRequestHeader('Authorization', `Bearer ${store.user.value?.authToken}`)
                 nextFile(uploadStatus, file.name)
                 xhr.onerror = console.error
+                
                 return new Promise((res, rej) => {
                     xhr.onload = () => res()
                     
@@ -70,6 +71,7 @@ export function uploadFiles(uploadStatus: UploadStatus, root: Folder, files: Fil
                     xhr.send(file)
                 })
             }
+
 
             await asyncReq()
             console.log('finished upload')
