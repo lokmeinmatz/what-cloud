@@ -3,6 +3,7 @@ use rocket::Route;
 use crate::token_validizer::token_storage;
 use rocket_contrib::json::Json;
 use rocket::response::content::Html;
+use log::{info, warn};
 
 pub fn mount_admin() -> Vec<Route> {
     routes![get_admin_root, get_active_sessions, get_image_cache, cleanup_image_cache]
