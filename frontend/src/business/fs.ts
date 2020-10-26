@@ -170,7 +170,7 @@ export class Node {
     }
 
     async forceDelete() {
-        const res = await store.fetchWithAuth(`/api/node?path=${this.path()}`, {method: 'DELETE'})
+        const res = await store.fetchWithAuth(`/api/node?path=${encodeURIComponent(this.path())}`, {method: 'DELETE'})
         if (res?.status == 202 && this.parent != undefined) {
             this.parent.fetched = false
             await this.parent.fetch()

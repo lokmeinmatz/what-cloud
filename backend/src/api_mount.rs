@@ -9,6 +9,8 @@ pub fn mount_api() -> Vec<Route> {
         crate::fs::delete_node_data,
         crate::fs::download::download_file,
         crate::fs::download::download_shared_file,
+        crate::fs::previews::preview_image,
+        crate::fs::previews::preview_image_shared,
         crate::fs::shared::update_folder_share,
         crate::fs::shared::get_my_shared,
         crate::fs::upload::post_upload,

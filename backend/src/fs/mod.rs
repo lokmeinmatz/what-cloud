@@ -1,7 +1,5 @@
-
 use crate::auth::UserID;
 use log::{info, warn};
-
 use rocket::response::{Responder};
 use rocket_contrib::json::Json;
 use std::borrow::Borrow;
@@ -9,9 +7,10 @@ use std::path::{Path, PathBuf};
 
 pub mod metadata;
 pub mod shared;
-pub mod zipwriter;
-pub mod upload;
 pub mod download;
+pub mod zipwriter;
+pub mod previews;
+pub mod upload;
 pub mod netfilepath;
 mod blocking_buf;
 mod async_buf;
