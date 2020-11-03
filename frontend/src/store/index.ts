@@ -1,8 +1,14 @@
-import { UserLogin, UserLoginResponse } from '@/business/nettypes'
+import { UserLogin, JWTPayload } from '@/business/nettypes'
 import { debugWindowProp } from '@/business/utils'
 import { ref, watch, computed } from 'vue'
 import { Node } from '../business/fs'
+import jwtDecode from 'jwt-decode'
 
+
+export type LocalStoredJWT = {
+    raw: string;
+    payload: JWTPayload;
+}
 
 export enum DisplayModeType {
     Files = 'files',
@@ -65,7 +71,7 @@ class SettingsStore {
 
 class Store {
 
-    user = ref<UserLoginResponse | null>((maybeUser != null) ? JSON.parse(maybeUser) as UserLoginResponse : null)
+    user = ref<LocalStoredJWT | null>((maybeUser != null) ? JSON.parse(maybeUser) as LocalStoredJWT : null)
     isLoggedIn = computed(() => {
         return this.user.value != null
     })
@@ -85,10 +91,14 @@ class Store {
             body: JSON.stringify(body)
         })
         if (res.ok) {
-            const resBody: UserLoginResponse = await res.json()
+            const resBody: string = await res.text()
+            const jwt: JWTPayload = jwtDecode(resBody)
             console.log("response of login:", resBody)
-            if (resBody.name && resBody.authToken) {
-                this.user.value = resBody
+            if (jwt.userName && jwt.userId) {
+                this.user.value = {
+                    raw: resBody,
+                    payload: jwt
+                }
                 return
             }
             console.error(resBody)
@@ -107,7 +117,7 @@ class Store {
         if (this.user.value == null) return null
         req = req || {}
         if (req.headers == undefined) req.headers = {};
-        (req.headers! as any)['Authorization'] = `Bearer ${this.user.value?.authToken}`
+        (req.headers! as any)['Authorization'] = `Bearer ${this.user.value?.raw}`
         return fetch(url, req)
     }
 

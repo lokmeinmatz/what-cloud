@@ -50,7 +50,7 @@ export default defineComponent({
       try {
         res = await fetch(url, {
           headers: {
-            Authorization: `Bearer ${store.user.value?.authToken}`,
+            Authorization: `Bearer ${store.user.value?.raw}`,
           },
         });
       } catch (e) {

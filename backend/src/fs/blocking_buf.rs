@@ -1,6 +1,6 @@
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::io::Read;
 use std::io::Write;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
 use crossbeam::sync;
@@ -66,7 +66,6 @@ pub struct BlockingConsumer {
 }
 
 impl BlockingConsumer {
-
     pub fn producer_alive(&self) -> bool {
         self.alive.load(Ordering::SeqCst) > 1
     }
@@ -80,10 +79,9 @@ impl BlockingConsumer {
             self.wait_produced.park();
         }
 
-
         if self.inner.is_empty() {
             return Ok(0);
-        } 
+        }
 
         // we are the only holder of this Arc -> Producer was dropped
         let read = self.inner.read(buf)?;
@@ -130,11 +128,10 @@ pub fn split_blocking(rb: RingBuffer<u8>) -> (BlockingProducer, BlockingConsumer
     )
 }
 
-
 #[cfg(test)]
 mod test {
-    use ringbuf::RingBuffer;
     use super::*;
+    use ringbuf::RingBuffer;
 
     #[test]
     fn test_blocking() {
@@ -152,11 +149,10 @@ mod test {
         loop {
             let r = cons.read(&mut rbuf).expect("read failed");
             if r == 0 {
-                break
+                break;
             }
             assert!(&rbuf[..r].iter().all(|e| *e == 1u8));
             eprintln!("read {} bytes", r);
-
         }
     }
 }

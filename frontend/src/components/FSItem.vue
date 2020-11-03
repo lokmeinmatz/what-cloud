@@ -43,7 +43,7 @@ export default defineComponent({
     }
 
     const prevImgUrl = computed<string>(() => {
-      return `url("/api/preview/file?path=${encodeURIComponent(props.file?.path()??"unknown")}&token=${store.user.value?.authToken}&resolution=256")`
+      return `url("/api/preview/file?path=${encodeURIComponent(props.file?.path()??"unknown")}&token=${store.user.value?.raw}&resolution=256")`
     })
 
 

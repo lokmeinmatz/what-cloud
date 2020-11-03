@@ -1,10 +1,10 @@
+use super::NetFilePath;
+use crate::auth::UserID;
+use crate::database::SharedDatabase;
+use log::{info, warn};
 use rocket::Data;
 use std::borrow::Borrow;
 use std::path::PathBuf;
-use super::NetFilePath;
-use crate::database::SharedDatabase;
-use crate::auth::UserID;
-use log::{info, warn};
 
 use rocket::response::status;
 use rocket::State;
@@ -17,7 +17,7 @@ pub async fn post_upload_shared(
     file_path: NetFilePath,
     db: State<'_, SharedDatabase>,
     shared_id: String,
-    data: Data
+    data: Data,
 ) -> UploadResponse {
     warn!("Upload for shared not implemented");
     return Err(status::Forbidden(None));
@@ -33,20 +33,12 @@ pub async fn post_upload_shared(
 }
 
 #[post("/upload?<file_path>", data = "<data>", rank = 2)]
-pub async fn post_upload(
-    file_path: NetFilePath,
-    user_id: UserID,
-    data: Data
-) -> UploadResponse {
+pub async fn post_upload(file_path: NetFilePath, user_id: UserID, data: Data) -> UploadResponse {
     handle_upload(file_path, user_id, data).await
 }
 
-
 #[post("/create_folder?<folder_path>")]
-pub async fn post_create_folder(
-    folder_path: NetFilePath,
-    user_id: UserID
-) -> UploadResponse {
+pub async fn post_create_folder(folder_path: NetFilePath, user_id: UserID) -> UploadResponse {
     let mut root: PathBuf = PathBuf::from(crate::config::data_path());
     root.push(&user_id.0);
     if !root.exists() {
@@ -54,8 +46,8 @@ pub async fn post_create_folder(
             Ok(()) => info!("Created base dir of user {}", user_id.0),
             Err(e) => {
                 warn!("Failed to create base dir of user {}: {:?}", user_id.0, e);
-                return Err(status::Forbidden(None))
-            },
+                return Err(status::Forbidden(None));
+            }
         }
     }
     root.push(Borrow::<str>::borrow(&folder_path));
@@ -74,11 +66,7 @@ pub async fn post_create_folder(
 
 use rocket::data::ToByteUnit;
 
-async fn handle_upload(
-    folder_path: NetFilePath,
-    user_id: UserID,
-    upload: Data
-) -> UploadResponse {
+async fn handle_upload(folder_path: NetFilePath, user_id: UserID, upload: Data) -> UploadResponse {
     let mut root: PathBuf = PathBuf::from(crate::config::data_path());
     root.push(&user_id.0);
     if !root.exists() {
@@ -86,8 +74,8 @@ async fn handle_upload(
             Ok(()) => info!("Created base dir of user {}", user_id.0),
             Err(e) => {
                 warn!("Failed to create base dir of user {}: {:?}", user_id.0, e);
-                return Err(status::Forbidden(None))
-            },
+                return Err(status::Forbidden(None));
+            }
         }
     }
     root.push(Borrow::<str>::borrow(&folder_path));
@@ -101,11 +89,10 @@ async fn handle_upload(
         Ok(size) => {
             info!("Uploaded {} bytes to {:?}", size, root);
             Ok(status::Accepted(None))
-        },
+        }
         Err(e) => {
             warn!("Upload failed: {}", e);
             Err(status::Forbidden(None))
         }
     }
-
 }

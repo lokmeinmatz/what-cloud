@@ -147,7 +147,7 @@ export class Node {
 
     downloadLink(): string {
         if (store.displayMode.value.mode == DisplayModeType.Files) {
-            return `/api/download/file?path=${encodeURIComponent(this.path())}&token=${store.user.value?.authToken}`
+            return `/api/download/file?path=${encodeURIComponent(this.path())}&token=${store.user.value?.raw}`
         }
         return `/api/download/file?path=${encodeURIComponent(this.path())}&shared_id=${store.displayMode.value.sharedId}` 
     }
@@ -159,7 +159,7 @@ export class Node {
         const res = await fetch(url, {
             method: 'PATCH',
             headers: {
-                'Authorization': `Bearer ${store.user.value?.authToken}`
+                'Authorization': `Bearer ${store.user.value?.raw}`
             }
         })
         if (res.status != 200) {
@@ -185,7 +185,7 @@ export class Node {
     }
 
     isMyNode(): boolean {
-        return this.ownedBy == store.user.value?.userId
+        return this.ownedBy == store.user.value?.payload.userId
     }
 }
 
@@ -335,7 +335,7 @@ export async function updateShared(shared: Array<{ path: string; share_id: strin
 
 export function reset() {
     console.log('Reset of filesystem cache')
-    store.rootNode.value = new Folder('', undefined, [], null, store.user.value?.userId || "unknown")
+    store.rootNode.value = new Folder('', undefined, [], null, store.user.value?.payload.userId || "unknown")
 }
 
 reset()
