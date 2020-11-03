@@ -1,8 +1,7 @@
-use std::path::Path;
-use std::borrow::Borrow;
 use path_slash::PathExt;
 use rocket::request::FromFormValue;
-
+use std::borrow::Borrow;
+use std::path::Path;
 
 #[derive(Debug)]
 pub struct NetFilePath(String);
@@ -61,7 +60,6 @@ impl<'v> FromFormValue<'v> for NetFilePath {
         Ok(NetFilePath(Path::new(&raw_path).to_slash_lossy()))
     }
 }
-
 
 #[cfg(test)]
 mod tests {

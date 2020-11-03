@@ -20,11 +20,7 @@ pub fn get_metadata(
     user_id: &UserID,
     db: State<SharedDatabase>,
 ) -> Option<NodeMetadata> {
-    let shared: Option<String> = db
-        .get_share_id(&user_id, path)
-        .ok()
-        .flatten();
-
+    let shared: Option<String> = db.get_share_id(&user_id, path).ok().flatten();
 
     let combined = super::to_abs_data_path(&user_id, path);
     let mut root: PathBuf = PathBuf::from(crate::config::data_path());
@@ -41,7 +37,6 @@ pub fn get_metadata(
         return None;
     }
 
-   
     match std::fs::metadata(&combined) {
         Err(_) => None,
         Ok(meta) => {

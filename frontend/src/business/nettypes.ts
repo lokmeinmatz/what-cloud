@@ -3,10 +3,9 @@ export interface UserLogin {
     passwordBase64: string
 }
 
-export interface UserLoginResponse {
-    name: string,
+export interface JWTPayload {
+    userName: string,
     profilePictureUrl?: string,
-    authToken: string,
     userId: string
 }
 

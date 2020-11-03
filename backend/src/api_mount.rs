@@ -2,8 +2,8 @@ use rocket::Route;
 
 pub fn mount_api() -> Vec<Route> {
     routes![
-        crate::auth::login, 
-        crate::auth::logout, 
+        crate::auth::login,
+        crate::auth::logout,
         crate::fs::get_node_data_shared,
         crate::fs::get_node_data,
         crate::fs::delete_node_data,

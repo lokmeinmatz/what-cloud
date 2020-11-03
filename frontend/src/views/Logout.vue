@@ -31,7 +31,7 @@ export default defineComponent({
       this.progress = 50
       await fetch('/api/user/logout', {
                 headers: {
-                    'Authorization': `Bearer ${store.user.value?.authToken}`
+                    'Authorization': `Bearer ${store.user.value?.raw}`
                 }
             })
       store.user.value = null
