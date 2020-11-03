@@ -9,22 +9,13 @@ use crate::token_validizer::token_storage;
 use rocket::request::{FromRequest, Outcome};
 use serde_json::json;
 
+mod jwt;
+
 #[derive(Deserialize)]
 pub struct UserLogin {
     name: String,
     #[serde(rename = "passwordBase64")]
     password_base64: String
-}
-
-#[derive(Serialize)]
-pub struct UserLoginResponse {
-    name: String,
-    #[serde(rename = "profilePictureUrl")]
-    profile_picture_url: Option<String>,
-    #[serde(rename = "authToken")]
-    auth_token: String,
-    #[serde(rename = "userId")]
-    user_id: UserID
 }
 
 
