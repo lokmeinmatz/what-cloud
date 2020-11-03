@@ -1,19 +1,19 @@
 use crate::auth::UserID;
 use log::{info, warn};
-use rocket::response::{Responder};
+use rocket::response::Responder;
 use rocket_contrib::json::Json;
 use std::borrow::Borrow;
 use std::path::{Path, PathBuf};
 
-pub mod metadata;
-pub mod shared;
-pub mod download;
-pub mod zipwriter;
-pub mod previews;
-pub mod upload;
-pub mod netfilepath;
-mod blocking_buf;
 mod async_buf;
+mod blocking_buf;
+pub mod download;
+pub mod metadata;
+pub mod netfilepath;
+pub mod previews;
+pub mod shared;
+pub mod upload;
+pub mod zipwriter;
 
 use netfilepath::NetFilePath;
 
@@ -30,7 +30,6 @@ pub struct NetNode {
     #[serde(rename = "ownedBy")]
     owned_by: UserID,
 }
-
 
 #[derive(Responder, Debug)]
 pub enum NodeContentResponse {
@@ -61,9 +60,8 @@ pub fn get_node_data_shared(
 ) -> NodeContentResponse {
     // check if shared id is allowed
     if let Some(se) = db.get_shared_entry(&shared_id) {
-        
         file_path.add_prefix(&se.path);
-        
+
         get_node(file_path, se.user, db, Some(&se.path))
     } else {
         NodeContentResponse::PathNotFound("Shared ID doesn't exist".into())
@@ -155,7 +153,7 @@ fn get_node(
             }
         }
     }
-    
+
     let metadata = match metadata::get_metadata(&folder_path, &user_id, db) {
         Some(md) => md,
         None => return NodeContentResponse::DirError("Metadata fetch failed".into()),
@@ -175,18 +173,17 @@ fn get_node(
     }))
 }
 
-
 use rocket::response::status;
 #[delete("/node?<path>")]
 pub async fn delete_node_data(
     path: NetFilePath,
     user_id: UserID,
-    addr: std::net::SocketAddr
+    addr: std::net::SocketAddr,
 ) -> Result<status::Accepted<()>, status::Forbidden<()>> {
     let mut root: PathBuf = PathBuf::from(crate::config::data_path());
     root.push(&user_id.0);
     root.push(Borrow::<str>::borrow(&path));
-    
+
     if !root.exists() {
         warn!("User tried to delete {:?} which doesn't exist", &root);
         return Err(status::Forbidden(None));

@@ -1,22 +1,22 @@
 #![feature(proc_macro_hygiene, decl_macro, min_const_generics)]
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 //#[macro_use] extern crate rocket_contrib;
-#[macro_use] extern crate serde_derive;
+#[macro_use]
+extern crate serde_derive;
 
-use log::{LevelFilter, info, error};
+use log::{error, info, LevelFilter};
 use simplelog::{Config, TerminalMode};
 // use rocket_cors::{Cors, AllowedOrigins};
 
-
+mod admin;
 mod api_mount;
 mod auth;
-mod database;
-mod token_validizer;
-mod fs;
 mod config;
+mod database;
+mod fs;
 mod icons;
-mod admin;
-
+mod utils;
 
 #[get("/")]
 fn index() -> &'static str {
@@ -30,11 +30,10 @@ fn cors() -> Cors {
 }
 */
 
-
 #[launch]
 fn rocket() -> rocket::Rocket {
-
-    simplelog::TermLogger::init(LevelFilter::Info, Config::default(), TerminalMode::Mixed).expect("simplelog failed");
+    simplelog::TermLogger::init(LevelFilter::Info, Config::default(), TerminalMode::Mixed)
+        .expect("simplelog failed");
 
     info!("Loading dotenv vars...");
     if let Err(e) = dotenv::dotenv() {
@@ -42,7 +41,6 @@ fn rocket() -> rocket::Rocket {
     }
 
     config::init().expect("Failed to init config...");
-    token_validizer::init(false);
 
     let db = database::SharedDatabase::new(config::db_path());
 
@@ -54,7 +52,6 @@ fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .manage(db)
         .manage(icons::IconsCache::empty())
-        .manage(token_validizer::ActiveTokenStorage::with_debug_access_token())
         .mount("/", routes![index])
         .mount("/api/", api_routes)
     //    .attach(cors())

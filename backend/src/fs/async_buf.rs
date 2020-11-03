@@ -34,7 +34,10 @@ impl Write for BlockingProducer {
         }
 
         let written = self.inner.write(b)?;
-        self.produced.store(self.produced.take().map(|w| {w.wake_by_ref(); w})); // wake consumer because dat was added
+        self.produced.store(self.produced.take().map(|w| {
+            w.wake_by_ref();
+            w
+        })); // wake consumer because dat was added
         Ok(written)
     }
     fn flush(&mut self) -> std::io::Result<()> {

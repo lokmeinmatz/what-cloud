@@ -59,7 +59,7 @@ export function uploadFiles(uploadStatus: UploadStatus, root: Folder, files: Fil
                 const url = `/api/upload?file_path=${encodeURIComponent(pathArrayToString([...root.pathFromRoot, file.name]))}`
                 console.log('Uploading file to', url)
                 xhr.open('POST', url)
-                xhr.setRequestHeader('Authorization', `Bearer ${store.user.value?.authToken}`)
+                xhr.setRequestHeader('Authorization', `Bearer ${store.user.value?.raw}`)
                 nextFile(uploadStatus, file.name)
                 xhr.onerror = console.error
                 
