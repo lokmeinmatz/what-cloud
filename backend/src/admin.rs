@@ -1,6 +1,7 @@
 use rocket::response::content::Html;
 use rocket::Route;
 use std::path::PathBuf;
+use log::{info, warn};
 
 pub fn mount_admin() -> Vec<Route> {
     routes![
