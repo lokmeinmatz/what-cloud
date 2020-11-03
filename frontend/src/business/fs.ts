@@ -43,13 +43,20 @@ export class Node {
 
         if (this.fetched) return ok(false)
         let url: string
-        if (store.displayMode.value?.mode == DisplayModeType.Files) url = `/api/node?file_path=${encodeURIComponent(this.path())}`
-        else if (store.displayMode.value?.sharedId != undefined) url = `/api/node?file_path=${encodeURIComponent(this.path())}&shared_id=${store.displayMode.value?.sharedId}`
+        const dmode = store.displayMode.value
+        if (dmode.mode == DisplayModeType.Files) url = `/api/node?file_path=${encodeURIComponent(this.path())}`
+        else if (dmode?.sharedId != undefined) url = `/api/node?file_path=${encodeURIComponent(this.path())}&shared_id=${store.displayMode.value?.sharedId}`
         else return err('neither owned node or shared with id in storage.displayMode')
         console.log(`fetching ${url}`)
         let res
+        //debugger
         try {
-            res = await store.fetchWithAuth(url)
+            if (dmode.mode == DisplayModeType.Files) {
+                res = await store.fetchWithAuth(url)
+            } else {
+                res = await fetch(url)
+            }
+            
             if (res == null) return err('Not logged in')
         }
         catch (e) {
