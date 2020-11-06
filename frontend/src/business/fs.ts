@@ -228,11 +228,21 @@ export class Folder extends Node {
 }
 
 export class File extends Node {
-    previewUrl: string
+
     constructor(name: string, pathFromRoot: string[], shared: string | null, ownedBy: string) {
         super(name, pathFromRoot, false, shared, ownedBy)
-        this.previewUrl = `/api/preview/file?path=${encodeURIComponent(this.path()??"unknown")}&token=${store.user.value?.raw}&resolution=256`
         this.type = NodeType.File
+    }
+
+    previewUrl(res: number): string {
+        let url = `/api/preview/file?path=${encodeURIComponent(this.path()??"unknown")}`
+        if (store.displayMode.value?.mode == DisplayModeType.Files) {
+            url += `&token=${store.user.value?.raw}`
+        } else {
+            url += `&shared_id=${store.displayMode.value?.sharedId}`
+        }
+        if (res >= 0) url += `&resolution=${res}`
+        return url
     }
 
     ext(): string {

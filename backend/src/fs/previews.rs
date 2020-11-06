@@ -54,6 +54,25 @@ pub fn cache_path() -> std::path::PathBuf {
     cache_dir
 }
 
+fn get_highest_cached(cache_dir: &Path, hashed_path: &str) -> Option<u32> {
+    let mut highest = None;
+
+    for f in cache_dir.read_dir().ok()? {
+        if let Ok(dentry) = f {
+            if let Some(fname) = dentry.file_name().to_str() {
+                if fname.contains(hashed_path) {
+                    let res = fname.split('_').next().and_then(|rs| rs.parse().ok());
+                    if res > highest {
+                        highest = res;
+                    }
+                }
+            }
+        }
+    }
+
+    highest
+}
+
 #[get("/preview/file?<path>&<token>&<resolution>", rank = 1)]
 pub async fn preview_image(
     path: NetFilePath,
@@ -74,9 +93,8 @@ pub async fn preview_image(
         return ImagePreviewResponse::NoImage("File needs to be an image (.png)");
     }
 
-    let res = resolution.unwrap_or(256);
-    if !ALLOWED_PREVIEW_RES.contains(&res) {
-        warn!("Tried to preview image with res = {}", res);
+    if let Some(oor) = resolution.and_then(|r| if ALLOWED_PREVIEW_RES.contains(&r) { None } else {Some(r)}) {
+        warn!("Tried to preview image with res = {}, not in {:?}", oor, ALLOWED_PREVIEW_RES);
         return ImagePreviewResponse::WrongSize("Allowed res >= 100 & <= 2048");
     }
 
@@ -94,6 +112,9 @@ pub async fn preview_image(
     }
 
     let hashed_path = hash_str_to_hex(abs_path.to_str().unwrap());
+
+
+    let res = resolution.or_else(|| get_highest_cached(&cache_dir, &hashed_path)).unwrap_or(256);
 
     let cached_file_name = format!("{}_{}.jpg", res, &hashed_path[0..30]);
 

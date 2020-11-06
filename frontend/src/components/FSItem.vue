@@ -44,7 +44,7 @@ export default defineComponent({
     }
 
     const prevCSSUrl = computed(() => {
-      if (props.file instanceof File) return `url("${props.file.previewUrl}")`
+      if (props.file instanceof File) return `url("${props.file.previewUrl(256)}")`
       return 'none'
     })
 

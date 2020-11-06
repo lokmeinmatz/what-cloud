@@ -16,7 +16,7 @@
           </button>
         </div>
         <div class="card-body" style="postion: absolute">
-          <img :src="file.previewUrl"/>
+          <img :src="prevUrl" @load.once="upgradePreview"/>
         </div>
       </div>
     </div>
@@ -25,7 +25,7 @@
 
 
 <script lang="ts">
-import { defineComponent, PropType } from "vue";
+import { defineComponent, PropType, ref } from "vue";
 import { File } from "../business/fs";
 
 export default defineComponent({
@@ -42,8 +42,14 @@ export default defineComponent({
       emit('close')
     }
 
+    const prevUrl = ref(props.file.previewUrl(-1))
+    const upgradePreview = () => {
+      prevUrl.value = props.file.downloadLink()
+    }
     return {
-      close
+      close,
+      prevUrl,
+      upgradePreview
     };
   },
 });
@@ -52,21 +58,23 @@ export default defineComponent({
 <style scoped>
 #card-wrapper {
   position: fixed;
+  z-index: 20;
   overflow: hidden;
-  display: flex;
-  justify-content: center;
+  display: block;
   top: 0;
   left: 0;
   height: 100vh;
   width: 100vw;
   background-color: rgba(0, 0, 0, 0.2);
-  align-items: stretch;
-  align-content: stretch;
 }
 
 .card {
-  align-self: center;
-  margin: 1em;
+  position: fixed;
+  z-index: 20;
+  top: 4em;
+  left: 1em;
+  right: 1em;
+  bottom: 1em;
 }
 
 .close {
@@ -86,6 +94,12 @@ export default defineComponent({
 
 .card-body {
   padding: 0;
+}
+
+img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .flyin-enter-active,
