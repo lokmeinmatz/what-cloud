@@ -228,18 +228,11 @@ export class Folder extends Node {
 }
 
 export class File extends Node {
-    /**
-     * Maybe move fetched to Folder so file has no fetched, or indicate metadata fetch?
-     * @param {Object} obj
-     * @param {string} obj.name
-     * @param {string[]} obj.pathFromRoot
-     * @param {string | null} obj.shared
-     */
+    previewUrl: string
     constructor(name: string, pathFromRoot: string[], shared: string | null, ownedBy: string) {
         super(name, pathFromRoot, false, shared, ownedBy)
-
+        this.previewUrl = `/api/preview/file?path=${encodeURIComponent(this.path()??"unknown")}&token=${store.user.value?.raw}&resolution=256`
         this.type = NodeType.File
-
     }
 
     ext(): string {

@@ -7,9 +7,9 @@
       height="24"
       style="margin-right: 0.5em;"
     />
-    <div v-else ref="prevImg" class="preview-img" :style="{'background-image': prevImgUrl}"></div>
-    <router-link v-if="file.type == 'folder'" class="f-name above" :to="displayMode.baseUrl() + file.path()">{{file.name}}</router-link>
-    <a v-else class="f-name above" :href="file.downloadLink()">{{file.name}}</a>
+    <div v-else ref="prevImg" class="preview-img" :style="{'background-image': prevCSSUrl}"></div>
+    <router-link class="f-name above" :to="displayMode.baseUrl() + file.path()">{{file.name}}</router-link>
+    <!--<a v-else class="f-name above" :href="file.downloadLink()">{{file.name}}</a>-->
     <div class="options">
       <DownloadButton class="above" :file="file" />
       <button class="btn btn-primary above" @click.stop="showInfo($event, file)">Infos</button>
@@ -19,8 +19,8 @@
 
 
 <script lang="ts">
-import { computed, defineComponent } from 'vue'
-import { Node } from "../business/fs";
+import { defineComponent, computed } from 'vue'
+import { File, Node } from "../business/fs";
 import DownloadButton from "./buttons/DownloadButton.vue";
 import { store } from '../store'
 
@@ -34,23 +34,26 @@ export default defineComponent({
     preview: Boolean
   },
 
-  setup(props, ctx) {
+  setup(props, {emit}) {
 
-    function showInfo(event: MouseEvent, file: Node) {
+    const showInfo = (event: MouseEvent, file: Node) => {
       event.stopPropagation();
-      event.preventDefault();
-      ctx.emit('nodeinfo-requested', file)
+      event.preventDefault()
+      console.log('nireq')
+      emit('nodeinforequested', file)
     }
 
-    const prevImgUrl = computed<string>(() => {
-      return `url("/api/preview/file?path=${encodeURIComponent(props.file?.path()??"unknown")}&token=${store.user.value?.raw}&resolution=256")`
+    const prevCSSUrl = computed(() => {
+      if (props.file instanceof File) return `url("${props.file.previewUrl}")`
+      return 'none'
     })
 
+   
 
     return {
       displayMode: store.displayMode,
       showInfo,
-      prevImgUrl
+      prevCSSUrl
     }
   } 
 

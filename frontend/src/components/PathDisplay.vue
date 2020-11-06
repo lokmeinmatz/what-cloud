@@ -56,7 +56,8 @@ export default defineComponent({
   },
   methods: {
     showInfo() {
-      this.$emit('nodeinfo-requested', this.folder)
+      console.log('nireq')
+      this.$emit('nodeinforequested', this.folder)
     }
   },
   computed: {
