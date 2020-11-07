@@ -1,60 +1,27 @@
 use crate::database::SharedDatabase;
 use crate::fs::{to_abs_data_path, zipwriter, NetFilePath, UserID};
 use log::warn;
-use rocket::http;
 use rocket::{http::RawStr, Request, State};
-use rocket::response::{self, NamedFile, Stream, Responder};
+use rocket::response::{NamedFile, Stream, Responder};
 use rocket::request::FromRequest;
 use std::borrow::Borrow;
 use std::path::Path;
-use std::io::{SeekFrom};
 use regex::Regex;
+
+use super::partial_file::PartialFileResponse;
 
 #[derive(Responder)]
 pub enum FileDownloadResponse {
     #[response(status = 200)]
     File(RangeAcceptingFile),
     #[response(status = 206)]
-    PartialFile(PartialFile),
+    PartialFile(PartialFileResponse),
     #[response(status = 200)]
     Zip(Stream<super::async_buf::AsyncConsumer>),
     #[response(status = 401)]
     Unauthorized(()),
     #[response(status = 404)]
     NotFound(()),
-}
-
-pub struct PartialFile {
-    file: tokio::fs::File,
-    range: std::ops::RangeInclusive<u64>,
-    total_size: u64
-}
-
-impl PartialFile {
-    pub async fn new(mut file: tokio::fs::File, range: std::ops::RangeInclusive<u64>, total_size: u64) -> Result<Self, ()> {
-        file.seek(SeekFrom::Start(*range.start())).await.map_err(drop)?;
-        // allready seeked file stored!!!
-        Ok(PartialFile {
-            file,
-            range,
-            total_size
-        })
-    }
-}
-
-impl<'r> Responder<'r, 'static> for PartialFile {
-    fn respond_to(self, _request: &'r Request<'_>) -> response::Result<'static> {
-        let start = *self.range.start();
-        let end = *self.range.end();
-        let res = response::Response::build()
-            .status(http::Status::PartialContent)
-            .raw_header("Content-Range", 
-            format!("bytes {}-{}/{}", start, end, self.total_size))
-            .sized_body(Some((end - start) as usize + 1), self.file)
-            .finalize();
-
-            Ok(res)
-    }
 }
 
 
@@ -102,6 +69,8 @@ impl<'r> Responder<'r, 'static> for RangeAcceptingFile {
     }
 }
 
+const PARTIAL_MAX_SIZE: u64 = 1024 * 1024;
+
 #[get("/download/file?<path>&<token>", rank = 1)]
 pub async fn download_file(path: NetFilePath, token: UserID, range: Option<RequestedRange>) -> FileDownloadResponse {
     let abs_path = to_abs_data_path(&token, Borrow::<Path>::borrow(&path));
@@ -126,11 +95,11 @@ pub async fn download_file(path: NetFilePath, token: UserID, range: Option<Reque
         }
 
         // limit end to last byte
-        let end = req_range.end.unwrap_or(start + 1023).min(total_size - 1);
+        let end = req_range.end.unwrap_or(start + PARTIAL_MAX_SIZE - 1).min(total_size - 1);
         
         // partial file
-        if let Ok(pf) = PartialFile::new(file,start..=end, total_size).await {
-            FileDownloadResponse::PartialFile(pf)
+        if let Ok(pfr) = PartialFileResponse::new(file,start..=end, total_size).await {
+            FileDownloadResponse::PartialFile(pfr)
         } else {
             // TODO better eerror handling
             FileDownloadResponse::NotFound(())

@@ -14,6 +14,7 @@ pub mod previews;
 pub mod shared;
 pub mod upload;
 pub mod zipwriter;
+pub mod partial_file;
 
 use netfilepath::NetFilePath;
 
@@ -28,7 +29,7 @@ pub struct NetNode {
     path_from_root: Vec<String>,
     metadata: metadata::NodeMetadata,
     #[serde(rename = "ownedBy")]
-    owned_by: UserID,
+    owned_by: UserID
 }
 
 #[derive(Responder, Debug)]
