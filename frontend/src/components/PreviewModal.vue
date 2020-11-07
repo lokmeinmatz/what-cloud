@@ -16,7 +16,11 @@
           </button>
         </div>
         <div class="card-body" style="postion: absolute">
-          <img :src="prevUrl" @load.once="upgradePreview"/>
+          <img v-if="file.previewType == 'image'" :src="prevUrl" @load.once="upgradePreview"/>
+          <video v-else-if="file.previewType == 'video'" controls>
+            <source :src="file.downloadLink()" type="video/quicktime">
+          </video>
+          <h1 v-else>No preview possible</h1>
         </div>
       </div>
     </div>

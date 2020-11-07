@@ -20,6 +20,21 @@ export enum NodeType {
     Folder = 'folder'
 }
 
+export enum PreviewType {
+    Image = 'image',
+    Video = 'video',
+    None = 'none'
+}
+
+function previewTypeFromExt(fname: string): PreviewType {
+    if (/.(png|jpe?g)$/i.test(fname)) {
+        return PreviewType.Image
+    } else if (/.(mov|mp4)$/i.test(fname)) {
+        return PreviewType.Video
+    }
+    return PreviewType.None
+}
+
 export class Node {
     name: string
     pathFromRoot: string[]
@@ -83,7 +98,13 @@ export class Node {
                 const t = this as unknown as Folder
                 t.children = [
                     ...snode.childrenFolder.map((f: string) => new Folder(f, undefined, snode.pathFromRoot.concat([f]), null, snode.ownedBy)),
-                    ...snode.files.map((f: string) => new File(f, snode.pathFromRoot.concat([f]).filter((e: string) => e.length > 0), null, snode.ownedBy))
+                    ...snode.files.map((f: string) => new File(
+                        f, 
+                        snode.pathFromRoot.concat([f]).filter((e: string) => e.length > 0), 
+                        null, 
+                        snode.ownedBy,
+                        previewTypeFromExt(f)
+                        ))
                 ];
 
                 if (t.children != undefined) {
@@ -227,11 +248,15 @@ export class Folder extends Node {
     }
 }
 
+
 export class File extends Node {
 
-    constructor(name: string, pathFromRoot: string[], shared: string | null, ownedBy: string) {
+    previewType: PreviewType
+
+    constructor(name: string, pathFromRoot: string[], shared: string | null, ownedBy: string, previewType: PreviewType = PreviewType.None) {
         super(name, pathFromRoot, false, shared, ownedBy)
         this.type = NodeType.File
+        this.previewType = previewType
     }
 
     previewUrl(res: number): string {
