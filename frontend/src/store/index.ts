@@ -113,6 +113,7 @@ class Store {
 
     // returns null if is not logged in, else fetch
     async fetchWithAuth(url: string, req?: RequestInit): Promise<Response | null> {
+        
         if (this.user.value == null) return null
         req = req || {}
         if (req.headers == undefined) req.headers = {};
