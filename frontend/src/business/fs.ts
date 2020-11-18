@@ -60,7 +60,7 @@ export class Node {
         let url: string
         const dmode = store.displayMode.value
         if (dmode.mode == DisplayModeType.Files) url = `/api/node?file_path=${encodeURIComponent(this.path())}`
-        else if (dmode?.sharedId != undefined) url = `/api/node?file_path=${encodeURIComponent(this.path())}&shared_id=${store.displayMode.value?.sharedId}`
+        else if (dmode?.sharedId != undefined) url = '/api/node?file_path=' + encodeURIComponent(this.path()) + 'shared_id=' + store.displayMode.value?.sharedId
         else return err('neither owned node or shared with id in storage.displayMode')
         console.log(`fetching ${url}`)
         let res
@@ -288,20 +288,20 @@ export class File extends Node {
 
 
 async function getNodeCacheOrFetch(currNode: Node, pathRemaining: string[], pathFromRoot: string[]): Promise<Result<Node, GetNodeError>> {
-
+    
     if (!currNode.fetched) {
         // fetch from server
         await currNode.fetch()
         if (currNode.pathFromRoot.length == 0)
-            store.rootNode.value = currNode
+        store.rootNode.value = currNode
     }
     if (pathRemaining.length == 0) return ok(currNode)
     const next = pathRemaining.splice(0, 1)[0]
     // we know chrrNode is a folder
     const nchild = (currNode as Folder).children?.find(f => f.name == next)
-
-    //debugger
+    
     if (nchild == undefined) {
+        //debugger
         console.error(currNode, next)
         return err(GetNodeError.NodeNotExisiting)
     }

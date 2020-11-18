@@ -70,17 +70,13 @@ export default defineComponent({
     }
 
     const pathElements = computed<string[]>(() => {
-      let r
       const mode = store.displayMode.value.mode
-      if (mode == DisplayModeType.Files) {
-        r = router.currentRoute.value.path.split('/').filter(e => e.trim().length > 0)
-      } else 
-      if (mode == DisplayModeType.Shared) {
-        r = router.currentRoute.value.path.split('/').filter(e => e.trim().length > 0)
-        r.shift() 
-      } else { return [] }
+      const r = router.currentRoute.value.path.split('/').filter(e => e.trim().length > 0).map(seg => decodeURIComponent(seg))
+
+      if (mode == DisplayModeType.Shared) { r.shift() } 
 
       r.shift()
+      console.log(r)
       return r
     })
 
