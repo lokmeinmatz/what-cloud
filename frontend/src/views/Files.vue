@@ -2,7 +2,7 @@
   <div id="files" :class="{'display-node-info': nodeInfo != null}">
     <main class="container-sm">
       <div class="header">
-        <PathDisplay :folder="pathDisplayObj" :mode="mode" @nodeinfo-requested="nodeInfo = $event"/>
+        <PathDisplay :folder="pathDisplayObj" :mode="mode" @nodeinforequested="showNodeInfo($event)"/>
       </div>
       <div v-if="folder == 'loading'" class="loading">
         <div class="spinner-border" role="status">
@@ -11,7 +11,7 @@
         <h3>Loading data...</h3>
       </div>
       <div v-else-if="folder != null">
-        <FileList :folder="folder" @nodeinfo-requested="nodeInfo = $event"/>
+        <FileList :folder="lastFolderLevel" @nodeinforequested="showNodeInfo($event)"/>
       </div>
       <h3 v-else>This folder doesn't exist 😥</h3>
     </main>
@@ -20,6 +20,7 @@
       <UploadButton :folder="folder"/>
       <NewFolderButton :folder="folder"/>
     </div>
+    <PreviewModal v-if="folder.type == 'file'" :file="folder" @close="goToParent()"/>
   </div>
 </template>
 <script lang="ts">
@@ -28,10 +29,11 @@ import { computed, defineComponent, ref, watch } from 'vue'
 import FileList from '../components/FileList.vue'
 import PathDisplay from '../components/PathDisplay.vue'
 import FileInfo from '../components/FileInfo.vue'
+import PreviewModal from '../components/PreviewModal.vue'
 import UploadButton from '../components/buttons/UploadButton.vue'
 import NewFolderButton from '../components/buttons/NewFolderButton.vue'
 import { DisplayModeType, store } from '../store'
-import { getNode, GetNodeError, Node } from '../business/fs'
+import { getNode, GetNodeError, Node, NodeType } from '../business/fs'
 import router from '../router'
 
 
@@ -42,7 +44,8 @@ export default defineComponent({
     PathDisplay,
     FileInfo,
     UploadButton,
-    NewFolderButton
+    NewFolderButton,
+    PreviewModal
   },
   setup() {
     const folder = ref<'loading' |Node | null>('loading')
@@ -53,18 +56,27 @@ export default defineComponent({
       return folder.value instanceof Node
     })
 
+    const lastFolderLevel = computed(() => {
+      if (folder.value instanceof Node) {
+        if (folder.value.type == NodeType.Folder) return folder.value
+        return folder.value.parent
+      }
+      return null
+    })
+
+    const showNodeInfo = (node: Node) => {
+      console.log('showNodeInfo', node)
+      nodeInfo.value = node
+    }
+
     const pathElements = computed<string[]>(() => {
-      let r
       const mode = store.displayMode.value.mode
-      if (mode == DisplayModeType.Files) {
-        r = router.currentRoute.value.path.split('/').filter(e => e.trim().length > 0)
-      } else 
-      if (mode == DisplayModeType.Shared) {
-        r = router.currentRoute.value.path.split('/').filter(e => e.trim().length > 0)
-        r.shift() 
-      } else { return [] }
+      const r = router.currentRoute.value.path.split('/').filter(e => e.trim().length > 0).map(seg => decodeURIComponent(seg))
+
+      if (mode == DisplayModeType.Shared) { r.shift() } 
 
       r.shift()
+      console.log(r)
       return r
     })
 
@@ -74,6 +86,18 @@ export default defineComponent({
       }
       return folder.value
     })
+
+    const goToParent = () => {
+      console.log('goToParent')
+      if (folder.value instanceof Node) {
+        if (folder.value.parent == undefined) return
+        // get last /
+        const oldUrl = router.currentRoute.value.fullPath
+        const lastSlash = oldUrl.lastIndexOf('/')
+        
+        router.push(oldUrl.substring(0, lastSlash))
+      }
+    }
     
     const updateFolder = async () => {
       console.log('route changed', router.currentRoute.value.path)
@@ -107,10 +131,13 @@ export default defineComponent({
     return {
       folder,
       nodeInfo,
+      showNodeInfo,
       mode,
       updateFolder,
       pathDisplayObj,
-      folderIsNode
+      folderIsNode,
+      lastFolderLevel,
+      goToParent
     }
   }
 })

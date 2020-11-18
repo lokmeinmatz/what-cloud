@@ -14,7 +14,7 @@
     "jwt-decode": "^3.0.0",
     "neverthrow": "^2.7.1",
     "nprogress": "^0.2.0",
-    "vue": "^3.0.0-0",
+    "vue": "^3.0.2",
     "vue-router": "^4.0.0-beta.11"
   },
   "devDependencies": {

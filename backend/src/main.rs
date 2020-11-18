@@ -42,6 +42,11 @@ fn rocket() -> rocket::Rocket {
 
     config::init().expect("Failed to init config...");
 
+    if !config::data_path().is_dir() {
+        error!("The data_path doesn't exist or isn't a dir");
+        panic!("Create folder first.");
+    }
+
     let db = database::SharedDatabase::new(config::db_path());
 
     info!("Cache path: {:?}", crate::fs::previews::cache_path());
