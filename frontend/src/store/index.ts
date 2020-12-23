@@ -23,6 +23,9 @@ export class DisplayMode {
         this.sharedId = shareID
     }
 
+    /**
+     * Returns `/files` or `/shared/<sharedId>` based on displaymode
+     */
     baseUrl(): string {
         return this.mode == DisplayModeType.Files ? '/files' : `/shared/${this.sharedId}`
     }
@@ -117,7 +120,13 @@ class Store {
         if (this.user.value == null) return null
         req = req || {}
         if (req.headers == undefined) req.headers = {};
-        (req.headers! as any)['Authorization'] = `Bearer ${this.user.value?.raw}`
+
+        // allow to set custom header
+         /* eslint-disable @typescript-eslint/no-non-null-assertion */
+         /* eslint-disable @typescript-eslint/no-explicit-any */
+         (req.headers! as any)['Authorization'] = `Bearer ${this.user.value?.raw}`
+         /* eslint-enable @typescript-eslint/no-non-null-assertion */
+         /* eslint-enable @typescript-eslint/no-explicit-any */
         return fetch(url, req)
     }
 

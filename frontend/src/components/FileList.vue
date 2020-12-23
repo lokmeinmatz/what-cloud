@@ -33,7 +33,7 @@
         :preview="displayStyle == 'previews'"
         :key="file.name"
         :file="file"
-        @nodeinfo-requested="$emit('nodeinfo-requested', $event)"
+        @nodeinforequested="emitNIreq($event)"
       />
     </div>
   </div>
@@ -56,7 +56,7 @@ export default defineComponent({
   props: {
     folder: Folder,
   },
-  setup(props) {
+  setup(props, {emit}) {
     const content = computed<Node[]>(() => {
       const c = (props.folder as Folder).children;
       if (c == undefined) return [];
@@ -69,9 +69,16 @@ export default defineComponent({
 
     const displayStyle = ref(DisplayStyle.List);
 
+
+    const emitNIreq = (node: Node) => {
+      console.log('emitNIreq')
+      emit('nodeinforequested', node)
+    }
+
     return {
       content,
       displayStyle,
+      emitNIreq
     };
   },
 });

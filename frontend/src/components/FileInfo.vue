@@ -145,7 +145,7 @@ export default defineComponent({
     });
 
     const nodeCanGetShared = computed<boolean>(() => {
-      return props.file?.ownedBy == store.user.value?.payload.userName && props.file instanceof Folder
+      return props.file?.ownedBy == store.user.value?.payload.userId && props.file instanceof Folder
     })
 
     const sharedToggle = computed({

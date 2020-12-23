@@ -20,6 +20,21 @@ export enum NodeType {
     Folder = 'folder'
 }
 
+export enum PreviewType {
+    Image = 'image',
+    Video = 'video',
+    None = 'none'
+}
+
+function previewTypeFromExt(fname: string): PreviewType {
+    if (/.(png|jpe?g)$/i.test(fname)) {
+        return PreviewType.Image
+    } else if (/.(mov|mp4)$/i.test(fname)) {
+        return PreviewType.Video
+    }
+    return PreviewType.None
+}
+
 export class Node {
     name: string
     pathFromRoot: string[]
@@ -45,7 +60,7 @@ export class Node {
         let url: string
         const dmode = store.displayMode.value
         if (dmode.mode == DisplayModeType.Files) url = `/api/node?file_path=${encodeURIComponent(this.path())}`
-        else if (dmode?.sharedId != undefined) url = `/api/node?file_path=${encodeURIComponent(this.path())}&shared_id=${store.displayMode.value?.sharedId}`
+        else if (dmode?.sharedId != undefined) url = '/api/node?file_path=' + encodeURIComponent(this.path()) + 'shared_id=' + store.displayMode.value?.sharedId
         else return err('neither owned node or shared with id in storage.displayMode')
         console.log(`fetching ${url}`)
         let res
@@ -90,7 +105,13 @@ export class Node {
                 const t = this as unknown as Folder
                 t.children = [
                     ...snode.childrenFolder.map((f: string) => new Folder(f, undefined, snode.pathFromRoot.concat([f]), null, snode.ownedBy)),
-                    ...snode.files.map((f: string) => new File(f, snode.pathFromRoot.concat([f]).filter((e: string) => e.length > 0), null, snode.ownedBy))
+                    ...snode.files.map((f: string) => new File(
+                        f, 
+                        snode.pathFromRoot.concat([f]).filter((e: string) => e.length > 0), 
+                        null, 
+                        snode.ownedBy,
+                        previewTypeFromExt(f)
+                        ))
                 ];
 
                 if (t.children != undefined) {
@@ -234,19 +255,26 @@ export class Folder extends Node {
     }
 }
 
+
 export class File extends Node {
-    /**
-     * Maybe move fetched to Folder so file has no fetched, or indicate metadata fetch?
-     * @param {Object} obj
-     * @param {string} obj.name
-     * @param {string[]} obj.pathFromRoot
-     * @param {string | null} obj.shared
-     */
-    constructor(name: string, pathFromRoot: string[], shared: string | null, ownedBy: string) {
+
+    previewType: PreviewType
+
+    constructor(name: string, pathFromRoot: string[], shared: string | null, ownedBy: string, previewType: PreviewType = PreviewType.None) {
         super(name, pathFromRoot, false, shared, ownedBy)
-
         this.type = NodeType.File
+        this.previewType = previewType
+    }
 
+    previewUrl(res: number): string {
+        let url = `/api/preview/file?path=${encodeURIComponent(this.path()??"unknown")}`
+        if (store.displayMode.value?.mode == DisplayModeType.Files) {
+            url += `&token=${store.user.value?.raw}`
+        } else {
+            url += `&shared_id=${store.displayMode.value?.sharedId}`
+        }
+        if (res >= 0) url += `&resolution=${res}`
+        return url
     }
 
     ext(): string {
@@ -260,20 +288,20 @@ export class File extends Node {
 
 
 async function getNodeCacheOrFetch(currNode: Node, pathRemaining: string[], pathFromRoot: string[]): Promise<Result<Node, GetNodeError>> {
-
+    
     if (!currNode.fetched) {
         // fetch from server
         await currNode.fetch()
         if (currNode.pathFromRoot.length == 0)
-            store.rootNode.value = currNode
+        store.rootNode.value = currNode
     }
     if (pathRemaining.length == 0) return ok(currNode)
     const next = pathRemaining.splice(0, 1)[0]
     // we know chrrNode is a folder
     const nchild = (currNode as Folder).children?.find(f => f.name == next)
-
-    //debugger
+    
     if (nchild == undefined) {
+        //debugger
         console.error(currNode, next)
         return err(GetNodeError.NodeNotExisiting)
     }

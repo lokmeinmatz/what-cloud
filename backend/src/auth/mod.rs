@@ -61,13 +61,7 @@ impl<'v> FromFormValue<'v> for UserID {
     }
 }
 
-impl UserID {
-    pub fn debug_access() -> Self {
-        UserID("DEBUG_ID".into())
-    }
-}
 
-pub const AUTH_TOKEN_LEN: usize = 16;
 
 #[inline]
 fn quad_to_char(b: u8) -> char {
