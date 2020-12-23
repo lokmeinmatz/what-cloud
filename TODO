@@ -1,5 +1,5 @@
 Backend:
-  ☐ Cache data based on hash of file name and last modified date?
+  ✔ Cache data based on hash of file name and last modified date? @done(20-11-03 22:55)
   ☐ show used storage space if calculated
 
 Upload-Feature:

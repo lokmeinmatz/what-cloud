@@ -74,7 +74,7 @@
               </tr>
             </tbody>
           </table>
-          <button class="btn btn-danger" @click="deleteNode">Delete</button>
+          <button class="btn btn-danger" v-if="file.isMyNode()" @click="deleteNode">Delete</button>
         </div>
       </aside>
     </div>
