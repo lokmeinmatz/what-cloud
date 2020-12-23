@@ -1,6 +1,6 @@
 #!/bin/bash
 
-IMAGE_VERSION="0.1.2"
+IMAGE_VERSION="0.1.4"
 IMAGE_FULL_NAME="lokmeinmatz/what-cloud-backend:$IMAGE_VERSION"
 PORT=5080
 DB_DIR="/srv/what-cloud/backend"
