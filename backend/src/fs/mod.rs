@@ -1,11 +1,11 @@
 use crate::auth::UserID;
 use log::{info, warn};
 use rocket::response::Responder;
-use rocket_contrib::json::Json;
+use rocket::serde::json::Json;
 use std::borrow::Borrow;
 use std::path::{Path, PathBuf};
 
-mod async_buf;
+// mod async_buf;
 mod blocking_buf;
 pub mod download;
 pub mod metadata;
@@ -13,7 +13,7 @@ pub mod netfilepath;
 pub mod previews;
 pub mod shared;
 pub mod upload;
-pub mod zipwriter;
+// pub mod zipwriter;
 pub mod partial_file;
 
 use netfilepath::NetFilePath;
@@ -56,7 +56,7 @@ use rocket::State;
 #[get("/node?<file_path>&<shared_id>", rank = 1)]
 pub fn get_node_data_shared(
     mut file_path: NetFilePath,
-    db: State<SharedDatabase>,
+    db: &State<SharedDatabase>,
     shared_id: String,
 ) -> NodeContentResponse {
     // check if shared id is allowed
@@ -73,7 +73,7 @@ pub fn get_node_data_shared(
 pub fn get_node_data(
     file_path: NetFilePath,
     user_id: UserID,
-    db: State<SharedDatabase>,
+    db: &State<SharedDatabase>,
 ) -> NodeContentResponse {
     get_node(file_path, user_id, db, None)
 }
@@ -82,7 +82,7 @@ pub fn get_node_data(
 fn get_node(
     folder_path: NetFilePath,
     user_id: UserID,
-    db: State<SharedDatabase>,
+    db: &State<SharedDatabase>,
     base_path: Option<&Path>,
 ) -> NodeContentResponse {
     let mut root: PathBuf = PathBuf::from(crate::config::data_path());

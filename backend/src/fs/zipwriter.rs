@@ -1,7 +1,7 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Condvar, Mutex};
 
-use super::async_buf::{split_blocking_async, AsyncConsumer};
+// use super::async_buf::{split_blocking_async, AsyncConsumer};
 use lazy_static::lazy_static;
 use log::{error, info};
 use ringbuf::RingBuffer;

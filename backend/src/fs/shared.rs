@@ -3,7 +3,7 @@ use crate::database::SharedDatabase;
 use crate::fs::NetFilePath;
 use log::info;
 use rocket::State;
-use rocket_contrib::json::Json;
+use rocket::serde::json::Json;
 use std::borrow::Borrow;
 use std::path::Path;
 
@@ -48,7 +48,7 @@ pub fn update_folder_share(
     enabled: bool,
     upload_limit: Option<u32>,
     user_id: UserID,
-    db: State<SharedDatabase>,
+    db: &State<SharedDatabase>,
 ) -> Result<SharedID, ()> {
     let combined: PathBuf = super::to_abs_data_path(&user_id, Borrow::<Path>::borrow(&path));
     if !combined.exists() || combined.is_file() {
@@ -75,6 +75,6 @@ pub struct SharedEntry {
 }
 
 #[get("/shared")]
-pub fn get_my_shared(user_id: UserID, db: State<SharedDatabase>) -> Json<Vec<SharedEntry>> {
+pub fn get_my_shared(user_id: UserID, db: &State<SharedDatabase>) -> Json<Vec<SharedEntry>> {
     Json(db.get_all_shared(&user_id))
 }

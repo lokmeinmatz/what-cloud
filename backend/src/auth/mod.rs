@@ -4,7 +4,7 @@ use log::info;
 use rocket::request::{FromRequest, Outcome};
 use rocket::response::status;
 use rocket::{Request, State};
-use rocket_contrib::json::Json;
+use rocket::serde::json::Json;
 use serde_json::json;
 use sha3::Digest;
 
@@ -28,9 +28,9 @@ impl std::fmt::Display for UserID {
 }
 
 #[rocket::async_trait]
-impl<'a, 'r> FromRequest<'a, 'r> for UserID {
+impl<'r> FromRequest<'r> for UserID {
     type Error = ();
-    async fn from_request(request: &'a Request<'r>) -> Outcome<Self, Self::Error> {
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         use rocket::http::Status;
 
 
@@ -48,16 +48,14 @@ impl<'a, 'r> FromRequest<'a, 'r> for UserID {
     }
 }
 
-use rocket::http::RawStr;
-use rocket::request::FromFormValue;
-
+use rocket::form::{FromFormField, ValueField};
 use self::jwt::JWT;
 
-impl<'v> FromFormValue<'v> for UserID {
-    type Error = ();
 
-    fn from_form_value(token: &'v RawStr) -> Result<UserID, ()> {
-        crate::auth::jwt::validate_and_parse(token).map(|jwt| jwt.user_id).map_err(drop)
+#[rocket::async_trait]
+impl<'v> FromFormField<'v> for UserID {
+    fn from_value(token: ValueField<'v>) -> rocket::form::Result<Self> {
+        crate::auth::jwt::validate_and_parse(token.value).map(|jwt| jwt.user_id).map_err(|_| rocket::form::Errors::new())
     }
 }
 
@@ -88,7 +86,7 @@ pub fn hash_str_to_hex(strng: &str) -> String {
 #[post("/user/login", data = "<login_data>")]
 pub fn login(
     mut login_data: Json<UserLogin>,
-    db: State<SharedDatabase>,
+    db: &State<SharedDatabase>,
 ) -> Result<String, status::Unauthorized<&'static str>> {
     let hashed_pw = hash_str_to_hex(login_data.password_base64.as_str());
     //println!("{}", hashed_pw);

@@ -38,12 +38,15 @@ impl IconsCache {
     }
 }
 
+use response::content;
 /// Sends token on success, else error
 #[get("/static/icons/<ext>")]
 pub fn icons_get(
     mut ext: String,
-    cache: State<IconsCache>,
-) -> Result<response::Content<String>, rocket::response::status::NotFound<()>> {
+    cache: &State<IconsCache>,
+) -> Result<content::Custom<String>, rocket::response::status::NotFound<()>> {
+
+
     if ext.ends_with(".svg") {
         for _ in 0..4 {
             ext.pop();
@@ -52,11 +55,11 @@ pub fn icons_get(
 
     // check if in cache
     if let Some(svg) = cache.get(&ext) {
-        return Ok(response::Content(http::ContentType::SVG, svg));
+        return Ok(content::Custom(http::ContentType::SVG, svg));
     }
     if ext.eq_ignore_ascii_case("folder") {
         let folder_svg = include_str!("../icons/folder.svg");
-        return Ok(response::Content(http::ContentType::SVG, folder_svg.into()));
+        return Ok(content::Custom(http::ContentType::SVG, folder_svg.into()));
     }
 
     info!("Generating icon {}", ext);
@@ -178,5 +181,5 @@ pub fn icons_get(
     // store in cache
     cache.insert_new(ext, s.clone());
 
-    Ok(response::Content(http::ContentType::SVG, s))
+    Ok(content::Custom(http::ContentType::SVG, s))
 }

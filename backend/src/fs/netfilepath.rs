@@ -1,5 +1,5 @@
 use path_slash::PathExt;
-use rocket::request::FromFormValue;
+use rocket::form::{FromFormField, ValueField};
 use std::borrow::Borrow;
 use std::path::Path;
 
@@ -38,21 +38,22 @@ impl Borrow<Path> for NetFilePath {
     }
 }
 
-impl<'v> FromFormValue<'v> for NetFilePath {
-    type Error = ();
-    fn from_form_value(raw: &'v rocket::http::RawStr) -> Result<Self, Self::Error> {
-        //dbg!(raw);
-        let mut raw_path: String = match raw.percent_decode() {
+#[rocket::async_trait]
+impl<'v> FromFormField<'v> for NetFilePath {
+    fn from_value(field: ValueField<'v>) -> rocket::form::Result<Self> {
+        let mut raw_path = field.value.to_owned();
+        dbg!(&raw_path);
+        /*let mut raw_path: String = match raw.percent_decode() {
             Ok(s) => s.into_owned(),
             Err(_) => {
                 return Err(());
             }
-        };
+        };*/
 
         if raw_path.contains("..") {
             // illegal
             // TODO are there other symbolic links or ways to escape the dir?
-            return Err(());
+            return Err(rocket::form::Error::validation("No .. allowed").into());
         };
         if raw_path.starts_with('/') {
             raw_path.remove(0);

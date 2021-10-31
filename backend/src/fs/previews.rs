@@ -4,8 +4,7 @@ use crate::fs::NetFilePath;
 use crate::fs::SharedDatabase;
 use crate::fs::UserID;
 use log::{error, info, warn};
-use rocket::http::RawStr;
-use rocket::response::NamedFile;
+use rocket::fs::NamedFile;
 use rocket::State;
 use std::borrow::Borrow;
 use std::ops::Range;
@@ -154,8 +153,8 @@ pub async fn preview_image(
 #[get("/preview/file?<path>&<shared_id>&<resolution>", rank = 2)]
 pub async fn preview_image_shared(
     mut path: NetFilePath,
-    shared_id: &RawStr,
-    db: State<'_, SharedDatabase>,
+    shared_id: &str,
+    db: &State<SharedDatabase>,
     resolution: Option<u32>,
 ) -> ImagePreviewResponse {
     if let Some(se) = db.get_shared_entry(&shared_id) {

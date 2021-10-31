@@ -18,7 +18,7 @@ pub struct NodeMetadata {
 pub fn get_metadata(
     path: &Path,
     user_id: &UserID,
-    db: State<SharedDatabase>,
+    db: &State<SharedDatabase>,
 ) -> Option<NodeMetadata> {
     let shared: Option<String> = db.get_share_id(&user_id, path).ok().flatten();
 

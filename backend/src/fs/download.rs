@@ -1,8 +1,9 @@
 use crate::database::SharedDatabase;
-use crate::fs::{to_abs_data_path, zipwriter, NetFilePath, UserID};
+use crate::fs::{to_abs_data_path, /* zipwriter,*/ NetFilePath, UserID};
 use log::warn;
-use rocket::{http::RawStr, Request, State};
-use rocket::response::{NamedFile, Stream, Responder};
+use rocket::{Request, State};
+use rocket::fs::NamedFile;
+use rocket::response::Responder;
 use rocket::request::FromRequest;
 use std::borrow::Borrow;
 use std::path::Path;
@@ -16,8 +17,8 @@ pub enum FileDownloadResponse {
     File(RangeAcceptingFile),
     #[response(status = 206)]
     PartialFile(PartialFileResponse),
-    #[response(status = 200)]
-    Zip(Stream<super::async_buf::AsyncConsumer>),
+    /* #[response(status = 200)]
+    Zip(ByteStream), */
     #[response(status = 401)]
     Unauthorized(()),
     #[response(status = 404)]
@@ -31,10 +32,10 @@ pub struct RequestedRange{
 }
 
 #[rocket::async_trait]
-impl<'a, 'r> FromRequest<'a, 'r> for RequestedRange {
+impl<'r> FromRequest<'r> for RequestedRange {
     type Error = ();
 
-    async fn from_request(req: &'a Request<'r>) -> rocket::request::Outcome<Self, Self::Error> {
+    async fn from_request(req: &'r Request<'_>) -> rocket::request::Outcome<Self, Self::Error> {
         if let Some(range_raw) = req.headers().get_one("Range") {
             // TODO lazy static
             let re = Regex::new(r#"bytes=(\d+)-(\d+)?"#).unwrap();
@@ -77,8 +78,12 @@ pub async fn download_file(path: NetFilePath, token: UserID, range: Option<Reque
 
     if abs_path.is_dir() {
         // handle zip file
+        /* 
         let cons = zipwriter::new_zip_writer(abs_path).unwrap();
-        FileDownloadResponse::Zip(Stream::chunked(cons, 4096))
+        FileDownloadResponse::Zip(ByteStream!{
+
+        }) */
+        panic!("Zip ByteStream not implemented")
     } else if let Some(req_range) = range {
         let start = req_range.start;
         
@@ -118,8 +123,8 @@ pub async fn download_file(path: NetFilePath, token: UserID, range: Option<Reque
 #[get("/download/file?<path>&<shared_id>", rank = 2)]
 pub async fn download_shared_file(
     mut path: NetFilePath,
-    shared_id: &RawStr,
-    db: State<'_, SharedDatabase>,
+    shared_id: &str,
+    db: &State<SharedDatabase>,
     range: Option<RequestedRange>
 ) -> FileDownloadResponse {
     if let Some(se) = db.get_shared_entry(&shared_id) {

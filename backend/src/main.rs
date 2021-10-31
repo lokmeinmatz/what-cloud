@@ -1,7 +1,6 @@
 #![feature(proc_macro_hygiene, decl_macro, min_const_generics)]
 #[macro_use]
 extern crate rocket;
-//#[macro_use] extern crate rocket_contrib;
 #[macro_use]
 extern crate serde_derive;
 
@@ -31,9 +30,13 @@ fn cors() -> Cors {
 */
 
 #[launch]
-fn rocket() -> rocket::Rocket {
-    simplelog::TermLogger::init(LevelFilter::Info, Config::default(), TerminalMode::Mixed)
-        .expect("simplelog failed");
+fn rocket() -> _ {
+    simplelog::TermLogger::init(
+        LevelFilter::Info, 
+        Config::default(), 
+        TerminalMode::Mixed,
+        simplelog::ColorChoice::Auto
+    ).expect("simplelog failed");
 
     info!("Loading dotenv vars...");
     if let Err(e) = dotenv::dotenv() {
@@ -54,7 +57,7 @@ fn rocket() -> rocket::Rocket {
     let mut api_routes = api_mount::mount_api();
     api_routes.extend_from_slice(&admin::mount_admin());
 
-    rocket::ignite()
+    rocket::build()
         .manage(db)
         .manage(icons::IconsCache::empty())
         .mount("/", routes![index])

@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 use crossbeam::{atomic, sync};
 use ringbuf::{Consumer, Producer, RingBuffer};
+use tokio::io::ReadBuf;
 use std::task::Waker;
 
 pub struct BlockingProducer {
@@ -109,8 +110,8 @@ impl rocket::tokio::io::AsyncRead for AsyncConsumer {
     fn poll_read(
         mut self: Pin<&mut Self>,
         ctx: &mut Context<'_>,
-        buf: &mut [u8],
-    ) -> Poll<Result<usize, std::io::Error>> {
+        buf: &mut ReadBuf,
+    ) -> Poll<Result<(), std::io::Error>> {
         // if no data currently is available to read, park until produced
         // also check if producer end is still alive to terminate if is dead
         if self.inner.is_empty() && self.producer_alive() {
@@ -123,15 +124,15 @@ impl rocket::tokio::io::AsyncRead for AsyncConsumer {
         }
 
         if self.inner.is_empty() {
-            return Poll::Ready(Ok(0));
+            return Poll::Ready(Ok(()));
         }
 
         // we are the only holder of this Arc -> Producer was dropped
-        let read = self.inner.read(buf)?;
+        let read = self.inner.read(buf.)?;
 
         // wake producer
         self.consumed.unpark();
-        Poll::Ready(Ok(read))
+        Poll::Ready(Ok(()))
     }
 }
 

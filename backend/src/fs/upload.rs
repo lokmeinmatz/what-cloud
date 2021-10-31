@@ -15,9 +15,9 @@ type UploadResponse = Result<status::Accepted<()>, status::Forbidden<()>>;
 #[post("/upload?<file_path>&<shared_id>", data = "<data>", rank = 1)]
 pub async fn post_upload_shared(
     file_path: NetFilePath,
-    db: State<'_, SharedDatabase>,
+    db: &State<SharedDatabase>,
     shared_id: String,
-    data: Data,
+    data: Data<'_>,
 ) -> UploadResponse {
     warn!("Upload for shared not implemented");
     return Err(status::Forbidden(None));
@@ -33,7 +33,7 @@ pub async fn post_upload_shared(
 }
 
 #[post("/upload?<file_path>", data = "<data>", rank = 2)]
-pub async fn post_upload(file_path: NetFilePath, user_id: UserID, data: Data) -> UploadResponse {
+pub async fn post_upload(file_path: NetFilePath, user_id: UserID, data: Data<'_>) -> UploadResponse {
     handle_upload(file_path, user_id, data).await
 }
 
@@ -66,7 +66,7 @@ pub async fn post_create_folder(folder_path: NetFilePath, user_id: UserID) -> Up
 
 use rocket::data::ToByteUnit;
 
-async fn handle_upload(folder_path: NetFilePath, user_id: UserID, upload: Data) -> UploadResponse {
+async fn handle_upload(folder_path: NetFilePath, user_id: UserID, upload: Data<'_>) -> UploadResponse {
     let mut root: PathBuf = PathBuf::from(crate::config::data_path());
     root.push(&user_id.0);
     if !root.exists() {
@@ -79,13 +79,20 @@ async fn handle_upload(folder_path: NetFilePath, user_id: UserID, upload: Data) 
         }
     }
     root.push(Borrow::<str>::borrow(&folder_path));
+    
     if root.exists() {
         // check if user has allready folder or needs to get created
         info!("User overwriting existing file");
-    }
+    } 
+
+    let target_file =  match tokio::fs::OpenOptions::new().write(true).create(true).open(&root).await {
+        Ok(f)=> f,
+        Err(_) => return Err(status::Forbidden(None))
+    };
+
     info!("Streaing to file {:?}", root);
     // stream file to root
-    match upload.open(10.gibibytes()).stream_to_file(&root).await {
+    match upload.open(10u64.gibibytes()).stream_to(target_file).await {
         Ok(size) => {
             info!("Uploaded {} bytes to {:?}", size, root);
             Ok(status::Accepted(None))

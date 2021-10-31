@@ -4,7 +4,7 @@ use rocket::http;
 use rocket::response::{self, Responder};
 use rocket::request::Request;
 
-use tokio::io::{AsyncRead, AsyncSeek};
+use tokio::io::{AsyncRead, AsyncSeek, AsyncSeekExt, ReadBuf};
 
 pub struct PartialFileResponse {
     file: PartialFile,
@@ -40,7 +40,6 @@ impl<'r> Responder<'r, 'static> for PartialFileResponse {
 pub struct PartialFile {
     file: tokio::fs::File,
     range: std::ops::RangeInclusive<u64>,
-    bytes_left: u64,
     total_size: u64
 }
 
@@ -48,34 +47,36 @@ impl PartialFile {
     pub async fn new(mut file: tokio::fs::File, range: std::ops::RangeInclusive<u64>) -> Self {
         file.seek(SeekFrom::Start(*range.start())).await.unwrap();
         let total_size = file.metadata().await.unwrap().len();
-        let bytes_left = (range.end() - range.start() + 1).min(total_size - range.start());
         Self {
             file,
-            bytes_left,
-            range,
+            range: std::ops::RangeInclusive::new(
+                *range.start(),
+                (range.end() - range.start() + 1).min(total_size - range.start())
+            ),
             total_size
         }
     }
+
+
 }
 
 impl AsyncRead for PartialFile {
     fn poll_read(
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
-        buf: &mut [u8],
-    ) -> std::task::Poll<std::io::Result<usize>> {
+        buf: &mut ReadBuf,
+    ) -> std::task::Poll<std::io::Result<()>> {
 
-        if self.bytes_left == 0 {
-            return std::task::Poll::Ready(Ok(0));
+        if buf.filled().len() == (1 + self.range.end() - self.range.start()) as usize {
+            return std::task::Poll::Ready(Ok(()));
         }
 
         let file = &mut self.file;
         tokio::pin!(file);
         
         match file.poll_read(cx, buf) {
-            std::task::Poll::Ready(Ok(r)) => {
-                self.bytes_left = self.bytes_left.saturating_sub(r as u64);
-                std::task::Poll::Ready(Ok(r))
+            std::task::Poll::Ready(Ok(_)) => {
+                std::task::Poll::Ready(Ok(()))
             },
             other => other
         }
@@ -85,9 +86,8 @@ impl AsyncRead for PartialFile {
 impl AsyncSeek for PartialFile {
     fn start_seek(
         mut self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
         position: SeekFrom,
-    ) -> std::task::Poll<std::io::Result<()>> {
+    ) -> std::io::Result<()> {
         let new_pos = match position {
             SeekFrom::Start(s) => SeekFrom::Start(s + self.range.start()),
             SeekFrom::End(e) => SeekFrom::End(*self.range.end() as i64 - self.total_size as i64 + 1 + e),
@@ -96,7 +96,7 @@ impl AsyncSeek for PartialFile {
         debug!("{:?} -> {:?}", position, new_pos);
         let file = &mut self.file;
         tokio::pin!(file);
-        file.start_seek(cx, new_pos)
+        file.start_seek(new_pos)
     }
 
     fn poll_complete(mut self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<std::io::Result<u64>> {

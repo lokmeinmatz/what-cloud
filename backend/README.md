@@ -1,5 +1,9 @@
 # backend
 
+## building the rust app
+
+If openssl was not found, you need to install it manually and export the OPENSSL_DIR path to the installation, e.g. C:\Program Files\OpenSSL-Win64 if you used the default on windows
+
 ## GET /api/static/icons/<ext/"folder">
 
 should return generated icon

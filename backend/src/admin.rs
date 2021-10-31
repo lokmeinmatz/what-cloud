@@ -118,7 +118,7 @@ fn cleanup_image_cache(max_size: Option<u64>) -> Option<Html<String>> {
         // seconds
         age: u64,
         path: PathBuf,
-    };
+    }
 
     let now = std::time::SystemTime::now();
 
