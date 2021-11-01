@@ -1,4 +1,5 @@
 use std::io::SeekFrom;
+use std::task::Poll;
 
 use rocket::http;
 use rocket::response::{self, Responder};
@@ -6,41 +7,12 @@ use rocket::request::Request;
 
 use tokio::io::{AsyncRead, AsyncSeek, AsyncSeekExt, ReadBuf};
 
-pub struct PartialFileResponse {
-    file: PartialFile,
-    total_size: u64
-}
-
-impl PartialFileResponse {
-    pub async fn new(file: tokio::fs::File, range: std::ops::RangeInclusive<u64>, total_size: u64) -> Result<Self, ()> {
-        Ok(Self {
-            file: dbg!(PartialFile::new(file, range).await),
-            total_size
-        })
-    }
-}
-
-impl<'r> Responder<'r, 'static> for PartialFileResponse {
-    fn respond_to(self, _request: &'r Request<'_>) -> response::Result<'static> {
-        let start = *self.file.range.start();
-        let end = *self.file.range.end();
-        let res = response::Response::build()
-            .status(http::Status::PartialContent)
-            .raw_header("Content-Range", 
-            format!("bytes {}-{}/{}", start, end, self.total_size))
-            .sized_body(Some((end - start) as usize + 1), self.file)
-            .finalize();
-        
-        Ok(dbg!(res))
-    }
-}
-
-
 #[derive(Debug)]
 pub struct PartialFile {
     file: tokio::fs::File,
     range: std::ops::RangeInclusive<u64>,
-    total_size: u64
+    total_size: u64,
+    bytes_read: u64
 }
 
 impl PartialFile {
@@ -51,34 +23,73 @@ impl PartialFile {
             file,
             range: std::ops::RangeInclusive::new(
                 *range.start(),
-                (range.end() - range.start() + 1).min(total_size - range.start())
+                *range.start() + (range.end() - range.start() + 1).min(total_size - range.start())
             ),
-            total_size
+            total_size,
+            bytes_read: 0
         }
     }
-
-
 }
+
+
+impl<'r> Responder<'r, 'static> for PartialFile {
+    fn respond_to(self, _request: &'r Request<'_>) -> response::Result<'static> {
+        let start = *self.range.start();
+        let end = *self.range.end();
+        let res = response::Response::build()
+            .status(http::Status::PartialContent)
+            .raw_header("Content-Range", 
+            format!("bytes {}-{}/{}", start, end, self.total_size))
+            .sized_body(Some((end - start) as usize + 1), self)
+            .finalize();
+        
+        Ok(dbg!(res))
+    }
+}
+
 
 impl AsyncRead for PartialFile {
     fn poll_read(
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
         buf: &mut ReadBuf,
-    ) -> std::task::Poll<std::io::Result<()>> {
+    ) -> Poll<std::io::Result<()>> {
 
-        if buf.filled().len() == (1 + self.range.end() - self.range.start()) as usize {
+        let total_range = 1 + self.range.end() - self.range.start();
+
+        if self.bytes_read >= total_range {
+            println!("Finished PartialFile async read");
             return std::task::Poll::Ready(Ok(()));
         }
 
-        let file = &mut self.file;
-        tokio::pin!(file);
+        let total_remaining = (total_range - self.bytes_read) as usize;
         
-        match file.poll_read(cx, buf) {
-            std::task::Poll::Ready(Ok(_)) => {
-                std::task::Poll::Ready(Ok(()))
+        let file = &mut self.file;
+        
+        tokio::pin!(file);
+
+        let mut bytes_in_buf = buf.filled().len() as u64;
+        
+        let poll_res = if buf.remaining() > total_remaining {
+            // only read up to total_remaining bytes into an manual created ReadBuf to not read more than needed
+            // TODO: can thsi get refactored to one single poll_read with truncated buf?
+            let mut read_buf_raw = vec![0u8; total_remaining];
+            let mut read_buf = ReadBuf::new(&mut read_buf_raw); 
+            bytes_in_buf = 0;
+            let p_res = file.poll_read(cx, &mut read_buf);
+            buf.put_slice(read_buf.filled());
+            p_res
+        } else {
+            file.poll_read(cx, buf)
+        };
+        
+        
+        match poll_res {
+            Poll::Ready(Ok(())) => {
+                self.bytes_read += buf.filled().len() as u64 - bytes_in_buf;
+                Poll::Ready(Ok(()))
             },
-            other => other
+            e => e
         }
     }
 }

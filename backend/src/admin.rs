@@ -1,6 +1,10 @@
-use rocket::response::content::Html;
+use rocket::{State, response::content::Html};
 use rocket::Route;
 use std::path::PathBuf;
+use crate::auth::jwt::JWT;
+use crate::database::{SharedDatabase, UserRoll};
+use crate::database::DBUser;
+use std::fmt::Write as FmtWrite;
 use log::{info, warn};
 
 pub fn mount_admin() -> Vec<Route> {
@@ -37,18 +41,30 @@ fn get_active_sessions() -> Json<Vec<Session>> {
 */
 
 #[get("/admin")]
-fn get_admin_root() -> Html<&'static str> {
-    Html(
-        r#"
-    <html>
-        <body>
-            <h1>Admin page</h1>
-            <a href="/api/admin/active_sessions">Active sessions</a>
-            <a href="/api/admin/image_cache">Image Cache</a>
-        </body>
-    </html>
-    "#,
-    )
+fn get_admin_root(db: &State<SharedDatabase>, jwt: JWT) -> std::io::Result<Html<String>> {
+    
+    if jwt.user_roll != UserRoll::Admin {
+        return Err(std::io::ErrorKind::PermissionDenied.into());
+    }
+
+    let mut body = std::fs::read_to_string("./pages/admin.html")?;
+    // generate user tr entries
+    let users: Vec<DBUser> = db.get_all_users().map_err(|_| std::io::Error::from(std::io::ErrorKind::Other))?;
+    let user_html = users.iter().fold(String::with_capacity(users.len() * 32), |mut res, user| {
+        writeln!(&mut res, r#"
+            <tr>
+                <td>{}</td>
+                <td class="pw-change">
+                    <input type="text"></input>
+                    <button onclick="changePassword('{}')">Change</button>
+                </td>
+            </tr>"#, user.name, user.id.0).unwrap();
+        res
+    });
+
+    body = body.replace("{{users}}", &user_html);
+
+    Ok(Html(body))
 }
 
 use crate::fs::previews;

@@ -42,7 +42,6 @@ impl Borrow<Path> for NetFilePath {
 impl<'v> FromFormField<'v> for NetFilePath {
     fn from_value(field: ValueField<'v>) -> rocket::form::Result<Self> {
         let mut raw_path = field.value.to_owned();
-        dbg!(&raw_path);
         /*let mut raw_path: String = match raw.percent_decode() {
             Ok(s) => s.into_owned(),
             Err(_) => {

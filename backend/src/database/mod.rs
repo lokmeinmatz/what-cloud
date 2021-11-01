@@ -1,7 +1,7 @@
 use crate::auth::UserID;
 use crate::fs::shared::{SharedEntry, SharedID};
 use log::{error, info, trace, warn};
-use rusqlite::{params, Connection, Row, ToSql};
+use rusqlite::{params, Connection, Result, Row, ToSql};
 use std::convert::{TryFrom, TryInto};
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard};
@@ -23,24 +23,35 @@ impl SharedDatabase {
         self.conn.lock().unwrap()
     }
 
-    pub fn get_user(&self, query: GetUserQuery) -> Option<DBUser> {
+    pub fn get_user(&self, query: GetUserQuery) -> rusqlite::Result<DBUser> {
         let conn = self.conn();
         match query {
             GetUserQuery::ByName(name) => {
                 let mut stmt = conn
-                    .prepare("SELECT ID, NAME, PASSWORD_HASH FROM USERS WHERE NAME = ?")
-                    .unwrap();
-                let n = stmt.query_map(params![name], user_from_row).unwrap().next();
+                    .prepare("SELECT ID, NAME, PASSWORD_HASH, ROLLS FROM USERS WHERE NAME = ?")?;
+                let n = stmt.query_map(params![name], user_from_row)?.next();
                 println!("db user by name {} -> {:?}", name, n);
-                return n
-                    .map(|e| {
-                        //eprintln!("{:?}", e);
-                        e.ok()
-                    })
-                    .flatten();
+                return match n {
+                    Some(r) => r,
+                    None => Err(rusqlite::Error::QueryReturnedNoRows)
+                }
             }
-            _ => None,
+            _ => panic!("get_user branch not implemented"),
         }
+    }
+
+    pub fn get_all_users(&self) -> rusqlite::Result<Vec<DBUser>> {
+        let conn =self.conn();
+        let mut stmt = conn
+            .prepare("SELECT ID, NAME, PASSWORD_HASH,ROLLS FROM USERS")
+            .unwrap();
+        let n = stmt.query_map(params![], user_from_row).unwrap();
+        return Ok(n.filter_map(|res| {
+            if let Err(e) = &res {
+                warn!("{:?}", e);
+            }
+            res.ok()
+        }).collect());
     }
 
     pub fn get_share_id(
@@ -214,7 +225,7 @@ pub enum GetUserQuery<'a> {
     ByID(&'a UserID),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub enum UserRoll {
     Guest = 0,
     User = 1,

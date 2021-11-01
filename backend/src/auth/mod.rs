@@ -1,6 +1,6 @@
 use crate::database;
 use crate::database::SharedDatabase;
-use log::info;
+use log::{info};
 use rocket::request::{FromRequest, Outcome};
 use rocket::response::status;
 use rocket::{Request, State};
@@ -8,7 +8,7 @@ use rocket::serde::json::Json;
 use serde_json::json;
 use sha3::Digest;
 
-mod jwt;
+pub mod jwt;
 
 #[derive(Deserialize)]
 pub struct UserLogin {
@@ -31,26 +31,15 @@ impl std::fmt::Display for UserID {
 impl<'r> FromRequest<'r> for UserID {
     type Error = ();
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        use rocket::http::Status;
-
-
-        if let Some(token) = request.headers().get("Authorization").next() {
-            if token.starts_with("Bearer ") {
-                let jwt = &token[7..];
-
-                if let Ok(jwt) = crate::auth::jwt::validate_and_parse(jwt) {
-                    return Outcome::Success(jwt.user_id);
-                }
-                
-            }
+        match jwt::JWT::from_request(request).await {
+            Outcome::Success(jwt) => Outcome::Success(jwt.user_id),
+            Outcome::Forward(e) => Outcome::Forward(e),
+            Outcome::Failure(e) => Outcome::Failure(e) 
         }
-        Outcome::Failure((Status::Unauthorized, ()))
     }
 }
 
 use rocket::form::{FromFormField, ValueField};
-use self::jwt::JWT;
-
 
 #[rocket::async_trait]
 impl<'v> FromFormField<'v> for UserID {
@@ -90,18 +79,23 @@ pub fn login(
 ) -> Result<String, status::Unauthorized<&'static str>> {
     let hashed_pw = hash_str_to_hex(login_data.password_base64.as_str());
     //println!("{}", hashed_pw);
-    if let Some(user) = db.get_user(database::GetUserQuery::ByName(&login_data.name)) {
-        if user.hashed_pw == hashed_pw {
-            info!("User login: {}", user.id);
-            let jwt = jwt::to_jwt(JWT {
-                profile_picture_url: None,
-                user_id: user.id,
-                user_name: std::mem::replace(&mut login_data.name, String::new()),
-            })
-            .map_err(|s| status::Unauthorized(Some(s)))?;
-
-            return Ok(jwt);
-        }
+    match db.get_user(database::GetUserQuery::ByName(&login_data.name)) {
+        Ok(user) => {
+            if user.hashed_pw == hashed_pw {
+                info!("User login: {}", user.id);
+                let jwt = jwt::to_jwt(jwt::JWT {
+                    profile_picture_url: None,
+                    user_id: user.id,
+                    user_name: std::mem::replace(&mut login_data.name, String::new()),
+                    user_roll: user.roll
+                })
+                .map_err(|s| status::Unauthorized(Some(s)))?;
+    
+                return Ok(jwt);
+            }
+            info!("PW hash unmatch: db: {} entered: {}", user.hashed_pw, hashed_pw)
+        },
+        Err(e) => error!("login db error: {:?}", e)
     }
 
     Err(status::Unauthorized(Some("Username or password unknown")))

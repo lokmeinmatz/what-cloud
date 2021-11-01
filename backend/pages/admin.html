@@ -1,0 +1,24 @@
+<html>
+<head>
+    <style>
+        table {
+            border-collapse: collapse;
+            border: 1px solid gray;
+        }
+    </style>
+</head>
+<body>
+    <h1>Admin page</h1>
+    <a href="/api/admin/active_sessions">Active sessions</a>
+    <a href="/api/admin/image_cache">Image Cache</a>
+    <h2>Account List</h2>
+    <table>
+        <tr>
+            <th>Username</th>
+            <th>Set new Password</th>
+        </tr>
+        {{users}}
+    </table>
+</body>
+
+</html>

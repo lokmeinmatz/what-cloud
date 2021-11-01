@@ -9,14 +9,14 @@ use std::borrow::Borrow;
 use std::path::Path;
 use regex::Regex;
 
-use super::partial_file::PartialFileResponse;
+use super::partial_file::PartialFile;
 
 #[derive(Responder)]
 pub enum FileDownloadResponse {
     #[response(status = 200)]
     File(RangeAcceptingFile),
     #[response(status = 206)]
-    PartialFile(PartialFileResponse),
+    PartialFile(PartialFile),
     /* #[response(status = 200)]
     Zip(ByteStream), */
     #[response(status = 401)]
@@ -70,7 +70,7 @@ impl<'r> Responder<'r, 'static> for RangeAcceptingFile {
     }
 }
 
-const PARTIAL_MAX_SIZE: u64 = 1024 * 1024;
+const PARTIAL_MAX_SIZE: u64 = 1024 * 1024 * 4;
 
 #[get("/download/file?<path>&<token>", rank = 1)]
 pub async fn download_file(path: NetFilePath, token: UserID, range: Option<RequestedRange>) -> FileDownloadResponse {
@@ -103,12 +103,7 @@ pub async fn download_file(path: NetFilePath, token: UserID, range: Option<Reque
         let end = req_range.end.unwrap_or(start + PARTIAL_MAX_SIZE - 1).min(total_size - 1);
         
         // partial file
-        if let Ok(pfr) = PartialFileResponse::new(file,start..=end, total_size).await {
-            FileDownloadResponse::PartialFile(pfr)
-        } else {
-            // TODO better eerror handling
-            FileDownloadResponse::NotFound(())
-        }
+        FileDownloadResponse::PartialFile(PartialFile::new(file,start..=end).await)
     } else {
         match NamedFile::open(&abs_path).await {
             Ok(nf) => FileDownloadResponse::File(RangeAcceptingFile(nf)),
